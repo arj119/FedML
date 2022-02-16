@@ -21,7 +21,7 @@ echo "conda activate fedml"
 conda activate fedml
 
 # Install PyTorch (please visit pytorch.org to check your version according to your physical machines
-conda install pytorch torchvision cudatoolkit=10.2 -c pytorch
+conda install pytorch torchvision cudatoolkit=11.3 -c pytorch
 
 # Install MPI
 conda install -c anaconda mpi4py
@@ -54,7 +54,6 @@ cd ../../
 cd ./data/shakespeare
 sh download_shakespeare.sh
 cd ../../
-
 
 # 4. fed_shakespeare
 cd ./data/fed_shakespeare
