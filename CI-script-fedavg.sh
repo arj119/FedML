@@ -3,13 +3,17 @@
 set -ex
 
 # code checking
-pyflakes .
+# pyflakes .
+
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
 # activate the fedml environment
 source "$HOME/miniconda/etc/profile.d/conda.sh"
+source "$SCRIPT_DIR/.env"
+
 conda activate fedml
 
-wandb login ee0b5f53d949c84cee7decbe7a629e63fb2f8408
+wandb login $WANDB_API_KEY
 wandb off
 
 assert_eq() {
@@ -31,11 +35,11 @@ round() {
 
 # 1. MNIST standalone FedAvg
 cd ./fedml_experiments/standalone/fedavg
-sh run_fedavg_standalone_pytorch.sh 0 2 2 4 mnist ./../../../data/mnist lr hetero 1 1 0.03 sgd 1
-sh run_fedavg_standalone_pytorch.sh 0 2 2 4 shakespeare ./../../../data/shakespeare rnn hetero 1 1 0.8 sgd 1
-sh run_fedavg_standalone_pytorch.sh 0 2 2 4 femnist ./../../../data/FederatedEMNIST/datasets cnn hetero 1 1 0.03 sgd 1
-sh run_fedavg_standalone_pytorch.sh 0 2 2 4 fed_shakespeare ./../../../data/fed_shakespeare/datasets rnn hetero 1 1 0.8 sgd 1
-sh run_fedavg_standalone_pytorch.sh 0 2 2 4 fed_cifar100 ./../../../data/fed_cifar100/datasets resnet18_gn hetero 1 1 0.03 adam 1
+sh run_fedavg_standalone_pytorch.sh 0 2 2 4 mnist ./../../../data/mnist lr hetero 2 3 0.03 sgd 1
+# sh run_fedavg_standalone_pytorch.sh 0 2 2 4 shakespeare ./../../../data/shakespeare rnn hetero 1 1 0.8 sgd 1
+# sh run_fedavg_standalone_pytorch.sh 0 2 2 4 femnist ./../../../data/FederatedEMNIST/datasets cnn hetero 1 1 0.03 sgd 1
+# sh run_fedavg_standalone_pytorch.sh 0 2 2 4 fed_shakespeare ./../../../data/fed_shakespeare/datasets rnn hetero 1 1 0.8 sgd 1
+# sh run_fedavg_standalone_pytorch.sh 0 2 2 4 fed_cifar100 ./../../../data/fed_cifar100/datasets resnet18_gn hetero 1 1 0.03 adam 1
 #sh run_fedavg_standalone_pytorch.sh 0 1 1 4 stackoverflow_lr ./../../../data/stackoverflow/datasets lr hetero 1 1 0.03 sgd 1
 #sh run_fedavg_standalone_pytorch.sh 0 1 1 4 stackoverflow_nwp ./../../../data/stackoverflow/datasets cnn hetero 1 1 0.03 sgd 1
 
