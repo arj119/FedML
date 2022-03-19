@@ -4,7 +4,6 @@ from fedml_api.standalone.fedmd.model_trainer import FedMLModelTrainer
 
 
 class Client:
-
     def __init__(self, client_idx, local_training_data, local_test_data, local_sample_number, args, device,
                  model_trainer: FedMLModelTrainer):
         self.client_idx = client_idx

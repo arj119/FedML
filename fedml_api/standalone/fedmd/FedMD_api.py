@@ -1,7 +1,7 @@
 import copy
 import logging
 import random
-from typing import List
+from typing import List, Tuple
 
 import numpy as np
 import torch
@@ -13,13 +13,13 @@ from fedml_api.standalone.fedmd.utils.data_utils import PublicDataset
 
 
 class FedMDAPI(object):
-    def __init__(self, dataset, device, args, client_model_trainers: List[FedMLModelTrainer]):
+    def __init__(self, dataset, device, args, client_models: List[Tuple[torch.nn.Module, int]]):
         """
         Args:
             dataset: Dataset presplit into data loaders
             device: Device to run training on
             args: Additional args
-            client_model_trainers: List of client models participating (assuming a stateful algorithm for simplicity)
+            client_models: List of client models and their frequency participating (assuming a stateful algorithm for simplicity)
         """
         self.device = device
         self.args = args
@@ -38,13 +38,17 @@ class FedMDAPI(object):
         public_datasets = []
         public_dataset_size = 0
         self.start_local_client_idx = 0
+
+        logging.info('############ Creating public dataset ############')
         for data_loader in train_data_local_dict.values():
-            public_dataset_size += len(data_loader)
+            public_dataset_size += len(data_loader.dataset)
             public_datasets.append(data_loader)
             if public_dataset_size >= args.public_dataset_size:
                 break
 
         self.public_data = PublicDataset(public_datasets)
+        logging.info(f'Public dataset size = {public_dataset_size}')
+        logging.info('############ Creating public dataset(END) ############')
 
         self.client_list = []
         self.train_data_local_num_dict = train_data_local_num_dict
@@ -52,39 +56,55 @@ class FedMDAPI(object):
         self.test_data_local_dict = test_data_local_dict
 
         self._setup_clients(train_data_local_num_dict, train_data_local_dict, test_data_local_dict,
-                            client_model_trainers)
+                            client_models)
 
     def _setup_clients(self, train_data_local_num_dict, train_data_local_dict, test_data_local_dict,
-                       client_model_trainers):
+                       client_models):
         logging.info("############setup_clients (START)#############")
 
-        for client_idx, model_trainer in enumerate(client_model_trainers):
-            c = Client(client_idx, train_data_local_dict[client_idx], test_data_local_dict[client_idx],
-                       train_data_local_num_dict[client_idx], self.args, self.device, model_trainer)
-            self.client_list.append(c)
+        for client_idx, (model, freq) in enumerate(client_models):
+            for i in range(freq):
+                model_trainer = FedMLModelTrainer(model)
+                c = Client(client_idx, train_data_local_dict[client_idx], test_data_local_dict[client_idx],
+                           train_data_local_num_dict[client_idx], self.args, self.device, model_trainer)
+                self.client_list.append(c)
+
         logging.info("############setup_clients (END)#############")
 
     def train(self):
         # Transfer learning
-        for c in self.client_list:
+        logging.info('\n###############Pre-Training clients#############\n')
+        for i, c in enumerate(self.client_list):
+            logging.info(f'Pre=training client: {i}')
             c.pre_train(self.public_data)
+        logging.info('###############Pre-Training clients (END)###########\n')
+
 
         for round_idx in range(self.args.comm_round):
 
-            logging.info(f"################Communication round : {round_idx}")
+            logging.info(f"################Communication round : {round_idx}\n")
 
+            logging.info(f"1. Communication Start")
             local_logits = []
             for idx, client in enumerate(self.client_list):
                 # Communication: Each party computes the class scores on the public dataset, and transmits the result
                 # to a central server
-                local_logits.append(client.get_logits(self.public_data))
+                logits = client.get_logits(self.public_data)
+                logging.info(f'Retrieving client {idx} logits: {logits.shape}')
+                local_logits.append(logits)
+            logging.info(f"1. Communication End")
 
+            logging.info(f"2. Aggregate Start")
             # Aggregate: The server computes an updated consensus, which is an average
-            consensus_logits = torch.mean(torch.cat(local_logits, dim=1))
+            consensus_logits = torch.mean(torch.stack(local_logits), dim=0)
+            logging.info(f"2. Aggregate End: Consensus logits dims{consensus_logits.shape}")
 
+            logging.info(f"3. Digest + Revisit Start")
             # Distribute, Digest and Revisit
             for idx, client in enumerate(self.client_list):
+                logging.info(f'\nTraining client: {idx}\n')
                 client.train(self.public_data, consensus_logits)
+            logging.info(f"3. Digest + Revisit End")
 
             # test results
             # at last round
