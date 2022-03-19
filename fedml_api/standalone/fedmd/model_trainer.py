@@ -1,3 +1,5 @@
+import logging
+
 import torch
 from torch import nn
 
@@ -101,6 +103,9 @@ class FedMLModelTrainer(ModelTrainer):
 
         model.train()
 
+        if consensus_logits is not None:
+            consensus_logits = consensus_logits.to(device)
+
         epoch_loss = []
         for epoch in range(epochs):
             batch_loss = []
@@ -113,7 +118,7 @@ class FedMLModelTrainer(ModelTrainer):
                 loss = criterion(output, labels)
 
                 # Alignment with consensus logits if provided
-                if kd_criterion and consensus_logits and kd_lambda:
+                if not(kd_criterion is None or consensus_logits is None or kd_lambda is None):
                     target_logits = consensus_logits[consensus_logits_idx:consensus_logits_idx + len(x)]
                     consensus_logits_idx += len(x)
                     # Knowledge distillation regulariser
@@ -125,7 +130,7 @@ class FedMLModelTrainer(ModelTrainer):
                 optimizer.step()
                 batch_loss.append(loss.item())
             epoch_loss.append(sum(batch_loss) / len(batch_loss))
-
+            logging.info(f'tEpoch: {epoch}\tLoss: {sum(epoch_loss) / len(epoch_loss):.6f}')
         return epoch_loss
 
     def get_logits(self, public_data, device):
@@ -144,9 +149,11 @@ class FedMLModelTrainer(ModelTrainer):
         model.eval()
 
         logits = []
-        for batch_idx, (x, _) in enumerate(public_data):
-            logits.append(model(public_data, logit=True)['logit'])
-        return torch.cat(logits)
+        with torch.no_grad():
+            for batch_idx, (x, _) in enumerate(public_data):
+                x = x.to(device)
+                logits.append(model(x))
+        return torch.cat(logits).detach().cpu()
 
     def test(self, test_data, device, args):
         model = self.model

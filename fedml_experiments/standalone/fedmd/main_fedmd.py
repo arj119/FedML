@@ -3,6 +3,7 @@ import logging
 import os
 import random
 import sys
+import json
 
 import numpy as np
 import torch
@@ -38,19 +39,17 @@ from fedml_api.model.cv.resnet_gn import resnet18
 from fedml_api.standalone.fedmd.FedMD_api import FedMDAPI
 from fedml_api.standalone.fedmd.model_trainer import FedMLModelTrainer
 
+
 def add_args(parser):
     """
     parser : argparse.ArgumentParser
     return a parser added with args required by fit
     """
     # Training settings
-    parser.add_argument('--model', type=str, default='resnet56', metavar='N',
-                        help='neural network used in training')
-
-    parser.add_argument('--dataset', type=str, default='cifar10', metavar='N',
+    parser.add_argument('--dataset', type=str, default='femnist', metavar='N',
                         help='dataset used for training')
 
-    parser.add_argument('--data_dir', type=str, default='./../../../data/cifar10',
+    parser.add_argument('--data_dir', type=str, default='./../../../data/FederatedEMNIST',
                         help='data directory')
 
     parser.add_argument('--partition_method', type=str, default='hetero', metavar='N',
@@ -90,6 +89,31 @@ def add_args(parser):
 
     parser.add_argument('--ci', type=int, default=0,
                         help='CI')
+
+    # FedMD arguments
+    parser.add_argument('--public_dataset_size', type=int, default=1000,
+                        help='Size of the public dataset that should be created')
+
+    parser.add_argument('--pretrain_epochs_public', type=int, default=5,
+                        help='Number of pre-training epochs to be done by each client on the public dataset')
+
+    parser.add_argument('--pretrain_epochs_private', type=int, default=5,
+                        help='Number of pre-training epochs to be doen by each client on the private dataset during'
+                             ' transfer learning')
+
+    parser.add_argument('--digest_epochs', type=int, default=5,
+                        help='Number of knowledge distillation epochs to be carried out in local training')
+
+    parser.add_argument('--kd_lambda', type=float, default=1.,
+                        help='Weighting of knowledge distillation regularisation term')
+
+    parser.add_argument('--revisit_epochs', type=int, default=5,
+                        help='Number of epochs to be carries out on private dataset in local training')
+
+    parser.add_argument('--client_config_file', type=str,
+                        default='./config/config.json',
+                        help='Path to client model configuration. Should be a json file with list of '
+                             '[(client_model, freq)]')
     return parser
 
 
@@ -273,7 +297,7 @@ def custom_model_trainer(args, model):
         raise NotImplementedError()
     elif args.dataset in ["fed_shakespeare", "stackoverflow_nwp"]:
         raise NotImplementedError()
-    else: # default model trainer is for classification problem
+    else:  # default model trainer is for classification problem
         return FedMLModelTrainer(model)
 
 
@@ -310,11 +334,17 @@ if __name__ == "__main__":
     # Note if the model is DNN (e.g., ResNet), the training will be very slow.
     # In this case, please use our FedML distributed version (./fedml_experiments/distributed_fedavg)
 
-    # TODO: Fix args and create model trainer config
+    with open(args.client_config_file, 'r') as f:
+        client_model_config = json.load(f)
+        client_models = []
+        for entry in client_model_config['client_models']:
+            model = create_model(args, model_name=entry['model'], output_dim=dataset[7])
+            client_models.append((model, entry['freq']))
 
-    model = create_model(args, model_name=args.model, output_dim=dataset[7])
-    model_trainer = custom_model_trainer(args, model)
-    logging.info(model)
 
-    fedavgAPI = FedMDAPI(dataset, device, args, model_trainer)
+    # model = create_model(args, model_name=args.model, output_dim=dataset[7])
+    # model_trainer = custom_model_trainer(args, model)
+    logging.info(client_models)
+
+    fedavgAPI = FedMDAPI(dataset, device, args, client_models)
     fedavgAPI.train()
