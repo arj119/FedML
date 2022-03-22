@@ -56,7 +56,7 @@ class FedArjunModelTrainer(ModelTrainer):
         self._knowledge_distillation(adapter_model, local_model, kd_transfer_data, args.kd_epochs, optimizer,
                                      cls_criterion, kd_criterion, args.kd_lambda, device)
         # 2. Train local model
-        self._train_loop(local_model, train_data, cls_criterion, args.train_epochs, optimizer, device)
+        self._train_loop(local_model, train_data, cls_criterion, args.epochs, optimizer, device)
 
         # 3. Transfer knowledge from local model to adapter model
         self._knowledge_distillation(local_model, adapter_model, kd_transfer_data, args.kd_epochs, optimizer,
@@ -135,28 +135,6 @@ class FedArjunModelTrainer(ModelTrainer):
             epoch_loss.append(sum(batch_loss) / len(batch_loss))
             logging.info(f'tEpoch: {epoch}\tLoss: {sum(epoch_loss) / len(epoch_loss):.6f}')
         return epoch_loss
-
-    def get_logits(self, public_data, device):
-        """
-        Calculate logits on public dataset. Part of communication phase
-
-        Args:
-            model: Model to evaluate public dataset on
-            public_data: Public dataset
-
-        Returns:
-
-        """
-        model = self.model
-        model = model.to(device)
-        model.eval()
-
-        logits = []
-        with torch.no_grad():
-            for batch_idx, (x, _) in enumerate(public_data):
-                x = x.to(device)
-                logits.append(model(x))
-        return torch.cat(logits).detach().cpu()
 
     def test(self, test_data, device, args=None):
         model = self.local_model.to(device)

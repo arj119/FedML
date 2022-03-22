@@ -14,7 +14,7 @@ class FedArjunClient:
         self.device = device
         self.model_trainer = model_trainer
 
-        self.local_training_data = self.prepare_local_training_data(local_training_data)
+        self.local_training_data, sizes = self.prepare_local_training_data(local_training_data)
 
         self.local_test_data = local_test_data
         self.local_sample_number = local_sample_number
@@ -22,15 +22,16 @@ class FedArjunClient:
         logging.info(f"""
             ########### Client {client_idx}: ###############
             Local sample number: {self.local_sample_number}
-            Training set size: {self.local_training_data[0]}
-            Transfer set size: {self.local_training_data[1]}
+            Training set size: {sizes[0]}
+            Transfer set size: {sizes[1]}
+            Training dataset size: {len(local_training_data.dataset)}
+            Test dataset size: {len(local_test_data.dataset)}
             ################################################
         """)
 
-
     def update_local_dataset(self, client_idx, local_training_data, local_test_data, local_sample_number):
         self.client_idx = client_idx
-        self.local_training_data = local_training_data
+        self.local_training_data, _ = self.prepare_local_training_data(local_training_data)
         self.local_test_data = local_test_data
         self.local_sample_number = local_sample_number
 
@@ -39,7 +40,8 @@ class FedArjunClient:
         transfer_set_size = int(self.args.transfer_set_percentage * len_local_dataset)
         transfer, train = random_split(local_training_data.dataset,
                                        [transfer_set_size, len_local_dataset - transfer_set_size])
-        return DataLoader(train, batch_size=self.args.batch_size), DataLoader(transfer, batch_size=self.args.batch_size)
+        return (DataLoader(train, batch_size=self.args.batch_size), DataLoader(transfer, batch_size=self.args.batch_size)), \
+               (len_local_dataset - transfer_set_size, transfer_set_size)
 
     def get_sample_number(self):
         return self.local_sample_number
@@ -54,6 +56,6 @@ class FedArjunClient:
         if b_use_test_dataset:
             test_data = self.local_test_data
         else:
-            test_data = self.local_training_data
+            test_data = self.local_training_data[0]
         metrics = self.model_trainer.test(test_data, self.device, self.args)
         return metrics

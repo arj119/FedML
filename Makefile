@@ -8,3 +8,6 @@ run-fedavg-experiments:
 
 run-fedmd-experiments:
     ./fedmd.sh
+
+run-federated_arjun-experiments:
+    ./fedmd.sh
