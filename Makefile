@@ -5,3 +5,6 @@ install:
 
 run-fedavg-experiments:
 	./CI-script-fedavg.sh
+
+run-fedmd-experiments:
+    ./fedmd.sh
