@@ -1,9 +1,9 @@
 import argparse
+import json
 import logging
 import os
 import random
 import sys
-import json
 
 import numpy as np
 import torch
@@ -30,11 +30,6 @@ from fedml_api.model.nlp.rnn import RNN_OriginalFedAvg, RNN_StackOverFlow
 from fedml_api.data_preprocessing.MNIST.data_loader import load_partition_data_mnist
 from fedml_api.model.linear.lr import LogisticRegression
 from fedml_api.model.cv.resnet_gn import resnet18
-
-# from fedml_api.standalone.fedavg.fedavg_api import FedAvgAPI
-# from fedml_api.standalone.fedavg.my_model_trainer_classification import MyModelTrainer as MyModelTrainerCLS
-# from fedml_api.standalone.fedavg.my_model_trainer_nwp import MyModelTrainer as MyModelTrainerNWP
-# from fedml_api.standalone.fedavg.my_model_trainer_tag_prediction import MyModelTrainer as MyModelTrainerTAG
 
 from fedml_api.standalone.fedmd.FedMD_api import FedMDAPI
 from fedml_api.standalone.fedmd.model_trainer import FedMLModelTrainer
@@ -314,7 +309,7 @@ if __name__ == "__main__":
 
     wandb.init(
         project="fedml",
-        name="FedAVG-r" + str(args.comm_round) + "-e" + str(args.epochs) + "-lr" + str(args.lr),
+        name="FedMD-r" + str(args.comm_round) + "-e" + str(args.epochs) + "-lr" + str(args.lr),
         config=args
     )
 
@@ -341,10 +336,7 @@ if __name__ == "__main__":
             model = create_model(args, model_name=entry['model'], output_dim=dataset[7])
             client_models.append((model, entry['freq']))
 
-
-    # model = create_model(args, model_name=args.model, output_dim=dataset[7])
-    # model_trainer = custom_model_trainer(args, model)
     logging.info(client_models)
 
-    fedavgAPI = FedMDAPI(dataset, device, args, client_models)
-    fedavgAPI.train()
+    fedmdAPI = FedMDAPI(dataset, device, args, client_models)
+    fedmdAPI.train()
