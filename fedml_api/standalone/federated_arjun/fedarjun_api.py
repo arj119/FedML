@@ -58,7 +58,7 @@ class FedArjunAPI(object):
         logging.info("############setup_clients (END)#############")
 
     def train(self):
-        w_global = None
+        w_global = self.global_model.get_model_params()
         for round_idx in range(self.args.comm_round):
 
             logging.info("################Communication round : {}".format(round_idx))
@@ -136,18 +136,11 @@ class FedArjunAPI(object):
             'losses': []
         }
 
-        client = self.client_list[0]
-
-        for client_idx in range(self.args.client_num_in_total):
+        for client in self.client_list:
             """
             Note: for datasets like "fed_CIFAR100" and "fed_shakespheare",
             the training client number is larger than the testing client number
             """
-            if self.test_data_local_dict[client_idx] is None:
-                continue
-            client.update_local_dataset(0, self.train_data_local_dict[client_idx],
-                                        self.test_data_local_dict[client_idx],
-                                        self.train_data_local_num_dict[client_idx])
             # train data
             train_local_metrics = client.local_test(False)
             train_metrics['num_samples'].append(copy.deepcopy(train_local_metrics['test_total']))
