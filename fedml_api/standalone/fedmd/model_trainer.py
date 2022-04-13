@@ -113,7 +113,7 @@ class FedMLModelTrainer(ModelTrainer):
             for batch_idx, (x, labels) in enumerate(train_data):
                 x, labels = x.to(device), labels.to(device)
 
-                model.zero_grad()
+                optimizer.zero_grad()
                 output = model(x)  # in classification case will be logits
                 loss = criterion(output, labels)
 
