@@ -12,7 +12,7 @@ except ImportError:
 
 
 class FedArjunModelTrainer(ModelTrainer):
-    def __init__(self, adapter_model, local_model):
+    def __init__(self, adapter_model, local_model, args):
         """
         Args:
             adapter_model: Homogeneous model between clients that acts as knowledge transfer vehicle.
@@ -21,6 +21,19 @@ class FedArjunModelTrainer(ModelTrainer):
         super().__init__(adapter_model)
         self.adapter_model = adapter_model
         self.local_model = local_model
+
+        if args.client_optimizer == "sgd":
+            self.local_optimizer_kd = torch.optim.SGD(self.local_model.parameters(), lr=args.lr)
+            self.local_optimizer = torch.optim.SGD(self.local_model.parameters(), lr=args.lr)
+            self.adapter_optimizer = torch.optim.SGD(self.adapter_model.parameters(), lr=args.lr)
+
+        else:
+            self.local_optimizer_kd = torch.optim.Adam(filter(lambda p: p.requires_grad, self.local_model.parameters()), lr=args.lr,
+                                         weight_decay=args.wd, amsgrad=True)
+            self.local_optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, self.local_model.parameters()), lr=args.lr,
+                                         weight_decay=args.wd, amsgrad=True)
+            self.adapter_optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, self.adapter_model.parameters()), lr=args.lr,
+                                         weight_decay=args.wd, amsgrad=True)
 
     def get_model_params(self):
         return self.adapter_model.cpu().state_dict()
@@ -42,22 +55,22 @@ class FedArjunModelTrainer(ModelTrainer):
 
         train_data, kd_transfer_data = train_data
 
+        if args.client_optimizer == "sgd":
+            local_optimizer_kd = torch.optim.SGD(self.local_model.parameters(), lr=args.lr)
+            local_optimizer = torch.optim.SGD(self.local_model.parameters(), lr=args.lr)
+            adapter_optimizer = torch.optim.SGD(self.adapter_model.parameters(), lr=args.lr)
+        
+        else:
+            local_optimizer_kd = torch.optim.Adam(filter(lambda p: p.requires_grad, self.local_model.parameters()), lr=args.lr,
+                                         weight_decay=args.wd, amsgrad=True)
+            local_optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, self.local_model.parameters()), lr=args.lr,
+                                         weight_decay=args.wd, amsgrad=True)
+            adapter_optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, self.adapter_model.parameters()), lr=args.lr,
+                                         weight_decay=args.wd, amsgrad=True)
+
         # train and update assuming classification task
         kd_criterion = Logits().to(device)
         cls_criterion = nn.CrossEntropyLoss().to(device)
-
-        if args.client_optimizer == "sgd":
-            local_optimizer_kd = torch.optim.SGD(self.model.parameters(), lr=args.lr)
-            local_optimizer = torch.optim.SGD(self.model.parameters(), lr=args.lr)
-            adapter_optimizer = torch.optim.SGD(self.model.parameters(), lr=args.lr)
-
-        else:
-            local_optimizer_kd = torch.optim.Adam(filter(lambda p: p.requires_grad, self.model.parameters()), lr=args.lr,
-                                         weight_decay=args.wd, amsgrad=True)
-            local_optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, self.model.parameters()), lr=args.lr,
-                                         weight_decay=args.wd, amsgrad=True)
-            adapter_optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, self.model.parameters()), lr=args.lr,
-                                         weight_decay=args.wd, amsgrad=True)
 
         # 1. Transfer knowledge from adapter model to local model
         self._knowledge_distillation(adapter_model, local_model, kd_transfer_data, args.kd_epochs, local_optimizer_kd,
@@ -133,7 +146,7 @@ class FedArjunModelTrainer(ModelTrainer):
             for batch_idx, (x, labels) in enumerate(train_data):
                 x, labels = x.to(device), labels.to(device)
 
-                optimizer.zero_grad()
+                model.zero_grad()
                 output = model(x)  # in classification case will be logits
                 loss = criterion(output, labels)
                 loss.backward()
@@ -195,3 +208,27 @@ class FedArjunModelTrainer(ModelTrainer):
 
     def test_on_the_server(self, train_data_local_dict, test_data_local_dict, device, args=None) -> bool:
         return False
+
+    def pre_train(self, private_data, device, args):
+        """
+               Pre-training in FedMD algorithm to do transfer learning from public data set
+               to private dataset
+
+               Args:
+                   private_data: Private data only known to the client
+                   device: Device to perform training on
+                   args: Other args
+               Returns:
+
+               """
+        model = self.adapter_model
+        model.to(device)
+
+        train_data, kd_transfer_data = private_data
+
+        # train and update
+        criterion = nn.CrossEntropyLoss().to(device)
+
+        # Transfer learning to private dataset
+        self._train_loop(model, train_data=kd_transfer_data, criterion=criterion, epochs=args.pretrain_epochs_private,
+                         optimizer=self.adapter_optimizer, device=device)

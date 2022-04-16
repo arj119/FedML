@@ -16,7 +16,7 @@ from fedml_api.standalone.fedmd.utils.data_utils import PublicDataset
 
 
 class FedArjunAPI(object):
-    def __init__(self, dataset, device, args, adapter_model, client_models: List[Tuple[torch.nn.Module,  int]]):
+    def __init__(self, dataset, device, args, adapter_model, client_models: List[Tuple[torch.nn.Module, int]]):
         """
         Args:
             dataset: Dataset presplit into data loaders
@@ -50,14 +50,23 @@ class FedArjunAPI(object):
 
         for client_idx, (local_model, freq) in enumerate(client_models):
             for i in range(freq):
-                model_trainer = FedArjunModelTrainer(copy.deepcopy(self.global_model.model), local_model)
+                model_trainer = FedArjunModelTrainer(
+                    copy.deepcopy(self.global_model.model),
+                    copy.deepcopy(local_model),
+                    self.args)
                 c = FedArjunClient(client_idx, train_data_local_dict[client_idx], test_data_local_dict[client_idx],
-                           train_data_local_num_dict[client_idx], self.args, self.device, model_trainer)
+                                   train_data_local_num_dict[client_idx], self.args, self.device, model_trainer)
                 self.client_list.append(c)
 
         logging.info("############setup_clients (END)#############")
 
     def train(self):
+        # logging.info('\n###############Pre-Training clients#############\n')
+        # for i, c in enumerate(self.client_list):
+            # logging.info(f'Pre=training client: {i}')
+            # c.pre_train()
+        # logging.info('###############Pre-Training clients (END)###########\n')
+
         w_global = self.global_model.get_model_params()
         for round_idx in range(self.args.comm_round):
 

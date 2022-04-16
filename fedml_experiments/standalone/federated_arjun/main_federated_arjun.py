@@ -52,7 +52,7 @@ def add_args(parser):
     parser.add_argument('--partition_alpha', type=float, default=0.5, metavar='PA',
                         help='partition alpha (default: 0.5)')
 
-    parser.add_argument('--batch_size', type=int, default=128, metavar='N',
+    parser.add_argument('--batch_size', type=int, default=20, metavar='N',
                         help='input batch size for training (default: 64)')
 
     parser.add_argument('--client_optimizer', type=str, default='adam',
@@ -93,6 +93,10 @@ def add_args(parser):
 
     parser.add_argument('--transfer_set_percentage', type=float, default=0.2,
                         help='Percentage of local training data to be used for knowledge distillation.')
+
+    parser.add_argument('--pretrain_epochs_private', type=int, default=5,
+                        help='Number of pre-training epochs to be done by each client on the private dataset during'
+                             ' transfer learning')
 
     parser.add_argument('--client_config_file', type=str,
                         default='./config/config.json',

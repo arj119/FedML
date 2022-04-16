@@ -46,6 +46,17 @@ class FedArjunClient:
     def get_sample_number(self):
         return self.local_sample_number
 
+    def pre_train(self):
+        """
+
+        Args:
+            public_data: Public dataset used for transfer learning
+
+        Returns:
+
+        """
+        self.model_trainer.pre_train(private_data=self.local_training_data, device=self.device, args=self.args)
+
     def train(self, w_global):
         self.model_trainer.set_model_params(w_global)
         self.model_trainer.train(self.local_training_data, self.device, self.args)
