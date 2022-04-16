@@ -64,7 +64,7 @@ class FedMDAPI(object):
 
         for client_idx, (model, freq) in enumerate(client_models):
             for i in range(freq):
-                model_trainer = FedMLModelTrainer(model)
+                model_trainer = FedMLModelTrainer(copy.deepcopy(model))
                 c = Client(client_idx, train_data_local_dict[client_idx], test_data_local_dict[client_idx],
                            train_data_local_num_dict[client_idx], self.args, self.device, model_trainer)
                 self.client_list.append(c)

@@ -3,6 +3,8 @@ import logging
 import torch
 from torch import nn
 
+from knowledge_distillation.logits import Logits
+
 try:
     from fedml_core.trainer.model_trainer import ModelTrainer
 except ImportError:
@@ -66,7 +68,7 @@ class FedMLModelTrainer(ModelTrainer):
         model.to(device)
 
         # train and update assuming classification task
-        kd_criterion = nn.MSELoss().to(device)
+        kd_criterion = Logits()
         cls_criterion = nn.CrossEntropyLoss().to(device)
 
         if args.client_optimizer == "sgd":
