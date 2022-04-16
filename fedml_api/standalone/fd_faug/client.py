@@ -1,11 +1,11 @@
 import logging
 
-from fedml_api.standalone.fedmd.model_trainer import FedMLModelTrainer
+from fedml_api.standalone.fd_faug.model_trainer import FDModelTrainer
 
 
 class Client:
     def __init__(self, client_idx, local_training_data, local_test_data, local_sample_number, args, device,
-                 model_trainer: FedMLModelTrainer):
+                 model_trainer: FDModelTrainer):
         self.client_idx = client_idx
         self.local_training_data = local_training_data
         self.local_test_data = local_test_data
@@ -15,6 +15,8 @@ class Client:
         self.args = args
         self.device = device
         self.model_trainer = model_trainer
+        self.global_label_logits = None
+
 
     def update_local_dataset(self, client_idx, local_training_data, local_test_data, local_sample_number):
         self.client_idx = client_idx
@@ -25,23 +27,14 @@ class Client:
     def get_sample_number(self):
         return self.local_sample_number
 
-    def train(self, public_data, consensus_logits):
-        self.model_trainer.train(self.local_training_data, self.device, self.args, public_data, consensus_logits)
-
-    def pre_train(self, public_data):
-        """
-
-        Args:
-            public_data: Public dataset used for transfer learning
-
-        Returns:
-
-        """
-        self.model_trainer.pre_train(public_data=public_data, private_data=self.local_training_data, device=self.device,
-                                     args=self.args)
+    def train(self):
+        return self.model_trainer.train(self.local_training_data, self.global_label_logits, self.device, self.args)
 
     def get_logits(self, public_data):
         return self.model_trainer.get_logits(public_data, self.device)
+
+    def update_global_label_logits(self, logits):
+        self.global_label_logits = logits
 
     def local_test(self, b_use_test_dataset):
         if b_use_test_dataset:

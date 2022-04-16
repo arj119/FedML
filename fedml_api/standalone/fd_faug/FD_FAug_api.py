@@ -7,9 +7,9 @@ import numpy as np
 import torch
 import wandb
 
-from fedml_api.standalone.fedmd.client import Client
-from fedml_api.standalone.fedmd.model_trainer import FedMLModelTrainer
-from fedml_api.standalone.fedmd.utils.data_utils import PublicDataset
+from fedml_api.standalone.fd_faug.client import Client
+from fedml_api.standalone.fd_faug.model_trainer import FedMLModelTrainer
+from fedml_api.standalone.fd_faug.utils.data_utils import PublicDataset
 
 
 class FedMDAPI(object):
@@ -72,39 +72,38 @@ class FedMDAPI(object):
         logging.info("############setup_clients (END)#############")
 
     def train(self):
-        # Transfer learning
-        logging.info('\n###############Pre-Training clients#############\n')
-        for i, c in enumerate(self.client_list):
-            logging.info(f'Pre=training client: {i}')
-            c.pre_train(self.public_data)
-        logging.info('###############Pre-Training clients (END)###########\n')
+        # FAug
+        # TODO: Implement federated augmentation scheme
 
 
         for round_idx in range(self.args.comm_round):
 
             logging.info(f"################Communication round : {round_idx}\n")
 
-            logging.info(f"1. Communication Start")
-            local_logits = []
+            logging.info(f"1. Global ensembling phase")
+            global_label_logits = dict()
+            local_logit_dict = dict()
             for idx, client in enumerate(self.client_list):
                 # Communication: Each party computes the class scores on the public dataset, and transmits the result
                 # to a central server
-                logits = client.get_logits(self.public_data)
-                logging.info(f'Retrieving client {idx} logits: {logits.shape}')
-                local_logits.append(logits)
-            logging.info(f"1. Communication End")
+                client_label_average_logits: dict = client.train()
+                logging.info(f'Retrieving client {idx} logits: {client_label_average_logits}')
 
-            logging.info(f"2. Aggregate Start")
-            # Aggregate: The server computes an updated consensus, which is an average
-            consensus_logits = torch.mean(torch.stack(local_logits), dim=0)
-            logging.info(f"2. Aggregate End: Consensus logits dims{consensus_logits.shape}")
+                local_logit_dict[idx] = client_label_average_logits
 
-            logging.info(f"3. Digest + Revisit Start")
-            # Distribute, Digest and Revisit
+                for label, logit in client_label_average_logits.items():
+                    global_label_logits[label] += logit
+
+            M = len(self.client_list)
+
             for idx, client in enumerate(self.client_list):
-                logging.info(f'\nTraining client: {idx}\n')
-                client.train(self.public_data, consensus_logits)
-            logging.info(f"3. Digest + Revisit End")
+                # Send ensemble logit vector back to client
+
+                for label, global_label_logits in global_label_logits.items():
+                    new_client_label_average_logits = (global_label_logits - local_logit_dict[idx]) / (M - 1)
+                    # Return updated global logits back to client
+                    client.update_global_label_logits(new_client_label_average_logits)
+
 
             # test results
             # at last round
