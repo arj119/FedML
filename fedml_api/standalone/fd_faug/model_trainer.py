@@ -9,7 +9,7 @@ except ImportError:
     from FedML.fedml_core.trainer.model_trainer import ModelTrainer
 
 
-class FDModelTrainer(ModelTrainer):
+class FDFAugModelTrainer(ModelTrainer):
     def get_model_params(self):
         return self.model.cpu().state_dict()
 
@@ -49,7 +49,7 @@ class FDModelTrainer(ModelTrainer):
         self._train_loop(model, train_data=private_data, criterion=criterion, epochs=args.pretrain_epochs_private,
                          optimizer=optimizer, device=device)
 
-    def train(self, train_data, global_average_label_logits, device, args):
+    def train(self, train_data, global_average_label_logits: dict, device, args):
         """
 
         Args:
@@ -77,7 +77,8 @@ class FDModelTrainer(ModelTrainer):
         model.train()
 
         if global_average_label_logits is not None:
-            global_average_label_logits = global_average_label_logits.to(device)
+            for l, logit in global_average_label_logits.items():
+                global_average_label_logits[l] = logit.to(device)
 
         label_sum_logits = dict()
         label_counts = dict()
@@ -94,9 +95,12 @@ class FDModelTrainer(ModelTrainer):
                 output = model(x)  # in classification case will be logits
                 loss = criterion(output, labels)
 
-                # Alignment with consensus logits if provided
+                # Global logits alignment using co-distillation if provided
                 if global_average_label_logits is not None:
-                    kd_loss = criterion(output, global_average_label_logits)
+                    global_average_logits_per_label = torch.stack([global_average_label_logits[l.cpu().item()] for l in labels])
+                    # Cross entropy loss with soft targets given by softmax function applied to global average logits per label
+                    soft_targets = torch.softmax(global_average_logits_per_label, dim=1)
+                    kd_loss = criterion(output, soft_targets)
                     loss += args.kd_gamma * kd_loss
 
                 loss.backward()
@@ -104,20 +108,23 @@ class FDModelTrainer(ModelTrainer):
                 optimizer.step()
                 batch_loss.append(loss.item())
 
-                # Update label average logits
-                unique_labels, counts = labels.unique(return_counts=True)
-                for l, c in zip(unique_labels.numpy(), counts.numpy()):
-                    indices = (labels == l).nonzero(as_tuple=True)[0].numpy()
-                    sum_logits = x[indices].sum(dim=0)
-                    label_sum_logits[l] = label_sum_logits.get(l, default=torch.zeros_like(sum_logits)) + sum_logits
-                    label_counts[l] = label_counts.get(l, default=0) + c
+                with torch.no_grad():
+                    # Update label average logits
+                    unique_labels, counts = labels.unique(return_counts=True)
+                    for l, c in zip(unique_labels.cpu().numpy(), counts.cpu().numpy()):
+                        indices = (labels == l).nonzero(as_tuple=True)[0].cpu().numpy()
+                        sum_logits = output[indices]
+                        sum_logits = sum_logits.sum(dim=0).cpu()
+                        label_sum_logits[l] = label_sum_logits.get(l, torch.zeros_like(sum_logits)) + sum_logits
+                        label_counts[l] = label_counts.get(l, 0) + c
 
             epoch_loss.append(sum(batch_loss) / len(batch_loss))
             logging.info(f'tEpoch: {epoch}\tLoss: {sum(epoch_loss) / len(epoch_loss):.6f}')
 
-            # Average label counts and send average label logits to server
-            for l, c in label_counts.items():
-                label_sum_logits[l] /= c
+        # Average label counts and send average label logits to server
+        for l, c in label_counts.items():
+            label_sum_logits[l] /= c
+
         return label_sum_logits
 
     def test(self, test_data, device, args=None):

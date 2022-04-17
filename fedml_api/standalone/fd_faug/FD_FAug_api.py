@@ -8,11 +8,10 @@ import torch
 import wandb
 
 from fedml_api.standalone.fd_faug.client import Client
-from fedml_api.standalone.fd_faug.model_trainer import FedMLModelTrainer
-from fedml_api.standalone.fd_faug.utils.data_utils import PublicDataset
+from fedml_api.standalone.fd_faug.model_trainer import FDFAugModelTrainer
 
 
-class FedMDAPI(object):
+class FDFAugAPI(object):
     def __init__(self, dataset, device, args, client_models: List[Tuple[torch.nn.Module, int]]):
         """
         Args:
@@ -31,25 +30,6 @@ class FedMDAPI(object):
         self.train_data_num_in_total = train_data_num
         self.test_data_num_in_total = test_data_num
 
-        # Select a sufficient number of data samples to be in public dataset
-        if not args.public_dataset_size:
-            args.public_dataset_size = 5000
-
-        public_datasets = []
-        public_dataset_size = 0
-        self.start_local_client_idx = 0
-
-        logging.info('############ Creating public dataset ############')
-        for data_loader in train_data_local_dict.values():
-            public_dataset_size += len(data_loader.dataset)
-            public_datasets.append(data_loader)
-            if public_dataset_size >= args.public_dataset_size:
-                break
-
-        self.public_data = PublicDataset(public_datasets)
-        logging.info(f'Public dataset size = {public_dataset_size}')
-        logging.info('############ Creating public dataset(END) ############')
-
         self.client_list = []
         self.train_data_local_num_dict = train_data_local_num_dict
         self.train_data_local_dict = train_data_local_dict
@@ -64,7 +44,7 @@ class FedMDAPI(object):
 
         for client_idx, (model, freq) in enumerate(client_models):
             for i in range(freq):
-                model_trainer = FedMLModelTrainer(model)
+                model_trainer = FDFAugModelTrainer(model)
                 c = Client(client_idx, train_data_local_dict[client_idx], test_data_local_dict[client_idx],
                            train_data_local_num_dict[client_idx], self.args, self.device, model_trainer)
                 self.client_list.append(c)
@@ -74,7 +54,6 @@ class FedMDAPI(object):
     def train(self):
         # FAug
         # TODO: Implement federated augmentation scheme
-
 
         for round_idx in range(self.args.comm_round):
 
@@ -87,23 +66,25 @@ class FedMDAPI(object):
                 # Communication: Each party computes the class scores on the public dataset, and transmits the result
                 # to a central server
                 client_label_average_logits: dict = client.train()
-                logging.info(f'Retrieving client {idx} logits: {client_label_average_logits}')
+                # logging.info(f'Retrieving client {idx} logits: {client_label_average_logits}')
 
                 local_logit_dict[idx] = client_label_average_logits
 
                 for label, logit in client_label_average_logits.items():
-                    global_label_logits[label] += logit
+                    global_label_logits[label] = global_label_logits.get(label, torch.zeros_like(logit)) + logit
 
+            logging.info(f'Updating global average logits and sending to clients')
             M = len(self.client_list)
 
             for idx, client in enumerate(self.client_list):
                 # Send ensemble logit vector back to client
+                new_client_label_average_logits = dict()
+                for label, sum_logits in global_label_logits.items():
+                    new_client_label_average_logits[label] = (sum_logits - local_logit_dict[idx][label]) / (M - 1)
 
-                for label, global_label_logits in global_label_logits.items():
-                    new_client_label_average_logits = (global_label_logits - local_logit_dict[idx]) / (M - 1)
-                    # Return updated global logits back to client
-                    client.update_global_label_logits(new_client_label_average_logits)
-
+                # Return updated global logits back to client
+                logging.info(f'Sent to client: {idx}')
+                client.update_global_label_logits(new_client_label_average_logits)
 
             # test results
             # at last round
@@ -166,26 +147,19 @@ class FedMDAPI(object):
             'losses': []
         }
 
-        client = self.client_list[0]
-
-        for client_idx in range(self.args.client_num_in_total):
+        for client in self.client_list:
             """
             Note: for datasets like "fed_CIFAR100" and "fed_shakespheare",
             the training client number is larger than the testing client number
             """
-            if self.test_data_local_dict[client_idx] is None:
-                continue
-            client.update_local_dataset(0, self.train_data_local_dict[client_idx],
-                                        self.test_data_local_dict[client_idx],
-                                        self.train_data_local_num_dict[client_idx])
             # train data
-            train_local_metrics = client.local_test(False)
+            train_local_metrics = client.local_test('train')
             train_metrics['num_samples'].append(copy.deepcopy(train_local_metrics['test_total']))
             train_metrics['num_correct'].append(copy.deepcopy(train_local_metrics['test_correct']))
             train_metrics['losses'].append(copy.deepcopy(train_local_metrics['test_loss']))
 
             # test data
-            test_local_metrics = client.local_test(True)
+            test_local_metrics = client.local_test('test')
             test_metrics['num_samples'].append(copy.deepcopy(test_local_metrics['test_total']))
             test_metrics['num_correct'].append(copy.deepcopy(test_local_metrics['test_correct']))
             test_metrics['losses'].append(copy.deepcopy(test_local_metrics['test_loss']))
@@ -223,9 +197,42 @@ class FedMDAPI(object):
             self._generate_validation_set()
 
         client = self.client_list[0]
-        client.update_local_dataset(0, None, self.val_global, None)
+        
         # test data
         test_metrics = client.local_test(True)
+
+        # test_metrics = {
+        #     'num_samples': [],
+        #     'num_correct': [],
+        #     'losses': []
+        # }
+        
+        # for client in range(self.client_list):
+        #     """
+        #     Note: for datasets like "fed_CIFAR100" and "fed_shakespheare",
+        #     the training client number is larger than the testing client number
+        #     """
+
+        #     client.update_local_dataset(0, None, None, self.val_global, None)
+
+        #     # train data
+        #     train_local_metrics = client.local_test(False)
+        #     train_metrics['num_samples'].append(copy.deepcopy(train_local_metrics['test_total']))
+        #     train_metrics['num_correct'].append(copy.deepcopy(train_local_metrics['test_correct']))
+        #     train_metrics['losses'].append(copy.deepcopy(train_local_metrics['test_loss']))
+
+        #     # test data
+        #     test_local_metrics = client.local_test(True)
+        #     test_metrics['num_samples'].append(copy.deepcopy(test_local_metrics['test_total']))
+        #     test_metrics['num_correct'].append(copy.deepcopy(test_local_metrics['test_correct']))
+        #     test_metrics['losses'].append(copy.deepcopy(test_local_metrics['test_loss']))
+
+        #     """
+        #     Note: CI environment is CPU-based computing. 
+        #     The training speed for RNN training is to slow in this setting, so we only test a client to make sure there is no programming error.
+        #     """
+        #     if self.args.ci == 1:
+        #         break
 
         if self.args.dataset == "stackoverflow_nwp":
             test_acc = test_metrics['test_correct'] / test_metrics['test_total']
