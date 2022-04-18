@@ -34,19 +34,19 @@ round() {
 }
 
 # 1. MNIST standalone FedAvg
-cd ./fedml_experiments/standalone/federated_arjun
-#sh run_federated_arjun_standalone_pytorch.sh 0 2 2 4 mnist ./../../../data/mnist lr hetero 2 3 0.03 sgd 1
-#sh run_federated_arjun_standalone_pytorch.sh 0 2 2 4 shakespeare ./../../../data/shakespeare rnn hetero 1 1 0.8 sgd 1
-sh run_federated_arjun_standalone_pytorch.sh 0 2 2 4 femnist ./../../../data/FederatedEMNIST/datasets hetero 1 1 0.03 sgd 1
-#sh run_federated_arjun_standalone_pytorch.sh 0 2 2 4 fed_shakespeare ./../../../data/fed_shakespeare/datasets rnn hetero 1 1 0.8 sgd 1
-#sh run_federated_arjun_standalone_pytorch.sh 0 2 2 4 fed_cifar100 ./../../../data/fed_cifar100/datasets resnet18_gn hetero 1 1 0.03 adam 1
-#sh run_federated_arjun_standalone_pytorch.sh 0 1 1 4 stackoverflow_lr ./../../../data/stackoverflow/datasets lr hetero 1 1 0.03 sgd 1
-#sh run_federated_arjun_standalone_pytorch.sh 0 1 1 4 stackoverflow_nwp ./../../../data/stackoverflow/datasets cnn hetero 1 1 0.03 sgd 1
+cd ./fedml_experiments/standalone/fd_faug
+#sh run_fd_faug_standalone_pytorch.sh 0 2 2 4 mnist ./../../../data/mnist lr hetero 2 3 0.03 sgd 1
+#sh run_fd_faug_standalone_pytorch.sh 0 2 2 4 shakespeare ./../../../data/shakespeare rnn hetero 1 1 0.8 sgd 1
+sh run_fd_faug_standalone_pytorch.sh 0 2 2 4 femnist ./../../../data/FederatedEMNIST/datasets homo 1 1 0.03 sgd 1
+#sh run_fd_faug_standalone_pytorch.sh 0 2 2 4 fed_shakespeare ./../../../data/fed_shakespeare/datasets rnn hetero 1 1 0.8 sgd 1
+#sh run_fd_faug_standalone_pytorch.sh 0 2 2 4 fed_cifar100 ./../../../data/fed_cifar100/datasets resnet18_gn hetero 1 1 0.03 adam 1
+#sh run_fd_faug_standalone_pytorch.sh 0 1 1 4 stackoverflow_lr ./../../../data/stackoverflow/datasets lr hetero 1 1 0.03 sgd 1
+#sh run_fd_faug_standalone_pytorch.sh 0 1 1 4 stackoverflow_nwp ./../../../data/stackoverflow/datasets cnn hetero 1 1 0.03 sgd 1
 #
 # assert that, for full batch and epochs=1, the accuracy of federated training(FedAvg) is equal to that of centralized training
-#sh run_federated_arjun_standalone_pytorch.sh 0 1 1 -1 mnist ./../../../data/mnist lr hetero 10 1 0.03 sgd 0
+#sh run_fd_faug_standalone_pytorch.sh 0 1 1 -1 mnist ./../../../data/mnist lr hetero 10 1 0.03 sgd 0
 #centralized_full_train_acc=$(cat wandb/latest-run/files/wandb-summary.json | python -c "import sys, json; print(json.load(sys.stdin)['Train/Acc'])")
-#sh run_federated_arjun_standalone_pytorch.sh 0 1000 1000 -1 mnist ./../../../data/mnist lr hetero 10 1 0.03 sgd 0
+#sh run_fd_faug_standalone_pytorch.sh 0 1000 1000 -1 mnist ./../../../data/mnist lr hetero 10 1 0.03 sgd 0
 #federated_full_train_acc=$(cat wandb/latest-run/files/wandb-summary.json | python -c "import sys, json; print(json.load(sys.stdin)['Train/Acc'])")
 #assert_eq $(round $centralized_full_train_acc 3) $(round $federated_full_train_acc 3)
 #cd ./../../../
@@ -70,7 +70,7 @@ sh run_federated_arjun_standalone_pytorch.sh 0 2 2 4 femnist ./../../../data/Fed
 #sh run_fedavg_distributed_pytorch.sh 2 2 1 4 resnet18_gn hetero 1 1 10 0.8 fed_cifar100 "./../../../data/fed_cifar100/datasets" 1
 #sh run_fedavg_distributed_pytorch.sh 2 2 1 4 rnn hetero 1 1 10 0.8 shakespeare "./../../../data/shakespeare" 1
 #sh run_fedavg_distributed_pytorch.sh 2 2 1 4 rnn hetero 1 1 10 0.8 fed_shakespeare "./../../../data/fed_shakespeare/datasets" 1
-
+##
 #sh run_fedavg_distributed_pytorch.sh 2 2 1 4 resnet56 homo 1 1 64 0.001 cifar10 "./../../../data/cifar10" 1
 #sh run_fedavg_distributed_pytorch.sh 2 2 1 4 resnet56 hetero 1 1 64 0.001 cifar10 "./../../../data/cifar10" 1
 #sh run_fedavg_distributed_pytorch.sh 2 2 1 4 resnet56 homo 1 1 64 0.001 cifar100 "./../../../data/cifar100" 1
@@ -78,7 +78,7 @@ sh run_federated_arjun_standalone_pytorch.sh 0 2 2 4 femnist ./../../../data/Fed
 #sh run_fedavg_distributed_pytorch.sh 2 2 1 4 resnet56 homo 1 1 64 0.001 cinic10 "./../../../data/cinic10" 1
 #sh run_fedavg_distributed_pytorch.sh 2 2 1 4 resnet56 hetero 1 1 64 0.001 cinic10 "./../../../data/cinic10" 1
 #cd ./../../../
-
+##
 # 3. MNIST mobile FedAvg
 #cd ./fedml_mobile/server/executor/
 #python3 app.py &
