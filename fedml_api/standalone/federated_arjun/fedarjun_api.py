@@ -61,11 +61,11 @@ class FedArjunAPI(object):
         logging.info("############setup_clients (END)#############")
 
     def train(self):
-        # logging.info('\n###############Pre-Training clients#############\n')
-        # for i, c in enumerate(self.client_list):
-            # logging.info(f'Pre=training client: {i}')
-            # c.pre_train()
-        # logging.info('###############Pre-Training clients (END)###########\n')
+        logging.info('\n###############Pre-Training clients#############\n')
+        for i, c in enumerate(self.client_list):
+            logging.info(f'Pre=training client: {i}')
+            c.pre_train()
+        logging.info('###############Pre-Training clients (END)###########\n')
 
         w_global = self.global_model.get_model_params()
         for round_idx in range(self.args.comm_round):

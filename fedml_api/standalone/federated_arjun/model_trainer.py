@@ -221,7 +221,7 @@ class FedArjunModelTrainer(ModelTrainer):
                Returns:
 
                """
-        model = self.adapter_model
+        model = self.local_model
         model.to(device)
 
         train_data, kd_transfer_data = private_data
@@ -230,5 +230,5 @@ class FedArjunModelTrainer(ModelTrainer):
         criterion = nn.CrossEntropyLoss().to(device)
 
         # Transfer learning to private dataset
-        self._train_loop(model, train_data=kd_transfer_data, criterion=criterion, epochs=args.pretrain_epochs_private,
+        self._train_loop(model, train_data=train_data, criterion=criterion, epochs=args.pretrain_epochs_private,
                          optimizer=self.adapter_optimizer, device=device)
