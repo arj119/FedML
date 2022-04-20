@@ -73,13 +73,13 @@ class FedArjunModelTrainer(ModelTrainer):
         cls_criterion = nn.CrossEntropyLoss().to(device)
 
         # 1. Transfer knowledge from adapter model to local model
-        self._knowledge_distillation(adapter_model, local_model, kd_transfer_data, args.kd_epochs, local_optimizer_kd,
+        self._knowledge_distillation(adapter_model, local_model, train_data, args.kd_epochs, local_optimizer_kd,
                                      cls_criterion, kd_criterion, args.kd_lambda, device)
-        # 2. Train local model
-        self._train_loop(local_model, train_data, cls_criterion, args.epochs, local_optimizer, device)
+        # # 2. Train local model
+        # self._train_loop(local_model, train_data, cls_criterion, args.epochs, local_optimizer, device)
 
         # 3. Transfer knowledge from local model to adapter model
-        self._knowledge_distillation(local_model, adapter_model, kd_transfer_data, args.kd_epochs, adapter_optimizer,
+        self._knowledge_distillation(local_model, adapter_model, train_data, args.kd_epochs, adapter_optimizer,
                                      cls_criterion, kd_criterion, args.kd_lambda, device)
 
     def _knowledge_distillation(self, teacher_model, student_model, transfer_set, epochs, optimizer, criterion,
