@@ -73,7 +73,7 @@ def add_args(parser):
     parser.add_argument('--client_num_per_round', type=int, default=10, metavar='NN',
                         help='number of workers')
 
-    parser.add_argument('--comm_round', type=int, default=10,
+    parser.add_argument('--comm_round', type=int, default=20,
                         help='how many round of communications we shoud use')
 
     parser.add_argument('--frequency_of_the_test', type=int, default=5,
@@ -99,7 +99,7 @@ def add_args(parser):
     parser.add_argument('--digest_epochs', type=int, default=5,
                         help='Number of knowledge distillation epochs to be carried out in local training')
 
-    parser.add_argument('--kd_lambda', type=float, default=1.,
+    parser.add_argument('--kd_lambda', type=float, default=0.5,
                         help='Weighting of knowledge distillation regularisation term')
 
     parser.add_argument('--revisit_epochs', type=int, default=5,
