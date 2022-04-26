@@ -3,7 +3,10 @@ import logging
 import torch
 from torch import nn
 
+from CKA.FedHeNNCKALoss import FedHeNNCKALoss
+from CKA.fedcka_loss import FedCKALoss
 from knowledge_distillation.logits import Logits
+from knowledge_distillation.soft_target import SoftTarget
 
 try:
     from fedml_core.trainer.model_trainer import ModelTrainer
@@ -69,18 +72,19 @@ class FedArjunModelTrainer(ModelTrainer):
                                          weight_decay=args.wd, amsgrad=True)
 
         # train and update assuming classification task
-        kd_criterion = Logits().to(device)
+        kd_criterion = SoftTarget(T=4).to(device)
+        # kd_criterion = FedCKALoss(device=device)
         cls_criterion = nn.CrossEntropyLoss().to(device)
 
         # 1. Transfer knowledge from adapter model to local model
-        self._knowledge_distillation(adapter_model, local_model, train_data, args.kd_epochs, local_optimizer_kd,
-                                     cls_criterion, kd_criterion, args.kd_lambda, device)
+        # self._knowledge_distillation(adapter_model, local_model, train_data, args.kd_epochs, local_optimizer_kd,
+        #                              cls_criterion, kd_criterion, args.kd_lambda, device)
         # # 2. Train local model
-        # self._train_loop(local_model, train_data, cls_criterion, args.epochs, local_optimizer, device)
+        self._train_loop(local_model, train_data, cls_criterion, args.epochs, local_optimizer, device)
 
         # 3. Transfer knowledge from local model to adapter model
-        self._knowledge_distillation(local_model, adapter_model, train_data, args.kd_epochs, adapter_optimizer,
-                                     cls_criterion, kd_criterion, args.kd_lambda, device)
+        # self._knowledge_distillation(local_model, adapter_model, train_data, args.kd_epochs, adapter_optimizer,
+        #                              cls_criterion, kd_criterion, args.kd_lambda, device)
 
     def _knowledge_distillation(self, teacher_model, student_model, transfer_set, epochs, optimizer, criterion,
                                 kd_criterion, kd_lambda, device):
