@@ -49,4 +49,3 @@ python3 ./main_federated_arjun.py \
 #--kd_lambda $KD_LAMBDA \
 #--revisit_epochs $REVISIT_EPOCHS \
 #--client_config_file $CLIENT_CONFIG_FILE
-$

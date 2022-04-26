@@ -109,6 +109,8 @@ class FedMLModelTrainer(ModelTrainer):
             consensus_logits = consensus_logits.to(device)
 
         epoch_loss = []
+        epoch_kd_loss = []
+        epoch_task_loss = []
         for epoch in range(epochs):
             batch_loss = []
             consensus_logits_idx = 0
@@ -118,6 +120,7 @@ class FedMLModelTrainer(ModelTrainer):
                 optimizer.zero_grad()
                 output = model(x)  # in classification case will be logits
                 loss = criterion(output, labels)
+                epoch_task_loss.append(loss.item())
 
                 # Alignment with consensus logits if provided
                 if not(kd_criterion is None or consensus_logits is None or kd_lambda is None):
@@ -125,6 +128,7 @@ class FedMLModelTrainer(ModelTrainer):
                     consensus_logits_idx += len(x)
                     # Knowledge distillation regulariser
                     kd_loss = kd_lambda * kd_criterion(output, target_logits)
+                    epoch_kd_loss.append(kd_loss.item())
                     loss += kd_loss
 
                 loss.backward()
@@ -132,7 +136,8 @@ class FedMLModelTrainer(ModelTrainer):
                 optimizer.step()
                 batch_loss.append(loss.item())
             epoch_loss.append(sum(batch_loss) / len(batch_loss))
-            logging.info(f'tEpoch: {epoch}\tLoss: {sum(epoch_loss) / len(epoch_loss):.6f}')
+            epoch_kd_loss_avg = 1_000 if len(epoch_kd_loss) == 0 else sum(epoch_kd_loss) / len(epoch_kd_loss)
+            logging.info(f'tEpoch: {epoch}\tLoss: {sum(epoch_loss) / len(epoch_loss):.6f} \tkd_loss: {epoch_kd_loss_avg:.6f} \ttask_loss: {sum(epoch_task_loss) / len(epoch_task_loss):.6f}')
         return epoch_loss
 
     def get_logits(self, public_data, device):

@@ -34,9 +34,9 @@ python3 ./main_fedavg.py \
 --partition_method $DISTRIBUTION  \
 --client_num_in_total $CLIENT_NUM \
 --client_num_per_round $WORKER_NUM \
---comm_round $ROUND \
---epochs $EPOCH \
---batch_size $BATCH_SIZE \
 --client_optimizer $OPT \
 --lr $LR \
---ci $CI
+#--comm_round $ROUND \
+#--epochs $EPOCH \
+#--batch_size $BATCH_SIZE \
+#--ci $CI
