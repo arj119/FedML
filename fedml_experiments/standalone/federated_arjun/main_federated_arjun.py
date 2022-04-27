@@ -1,10 +1,10 @@
-import json
 import logging
-import os
 import sys
+import os
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.getcwd(), "../../../")))
 
+from fedml_experiments.standalone.utils.config import parse_config
 from fedml_experiments.standalone.utils.model import create_model
 from fedml_experiments.standalone.utils.setup import setup
 
@@ -45,13 +45,13 @@ if __name__ == "__main__":
     # Note if the model is DNN (e.g., ResNet), the training will be very slow.
     # In this case, please use our FedML distributed version (./fedml_experiments/distributed_fedavg)
 
-    with open(args.client_config_file, 'r') as f:
-        client_model_config = json.load(f)
-        adapter_model = create_model(args, model_name=client_model_config['adapter_model'], output_dim=dataset[7])
-        client_models = []
-        for entry in client_model_config['client_models']:
-            model = create_model(args, model_name=entry['model'], output_dim=dataset[7])
-            client_models.append((model, entry['freq']))
+    client_model_config = parse_config(args.client_config_file)
+
+    adapter_model = create_model(args, model_name=client_model_config['adapter_model'], output_dim=dataset[7])
+    client_models = []
+    for entry in client_model_config['client_models']:
+        model = create_model(args, model_name=entry['model'], output_dim=dataset[7])
+        client_models.append((model, entry['freq']))
 
     # model = create_model(args, model_name=args.model, output_dim=dataset[7])
     # model_trainer = custom_model_trainer(args, model)
