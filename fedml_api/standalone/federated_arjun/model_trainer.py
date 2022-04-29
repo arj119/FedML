@@ -4,6 +4,7 @@ import torch
 from torch import nn
 
 from knowledge_distillation.logits import Logits
+from knowledge_distillation.soft_target import SoftTarget
 
 try:
     from fedml_core.trainer.model_trainer import ModelTrainer
@@ -12,7 +13,7 @@ except ImportError:
 
 
 class FedArjunModelTrainer(ModelTrainer):
-    def __init__(self, adapter_model, local_model, args):
+    def __init__(self, adapter_model, local_model, args, train_adapter_model_only=False):
         """
         Args:
             adapter_model: Homogeneous model between clients that acts as knowledge transfer vehicle.
@@ -21,6 +22,7 @@ class FedArjunModelTrainer(ModelTrainer):
         super().__init__(adapter_model)
         self.adapter_model = adapter_model
         self.local_model = local_model
+        self.train_adapter_model_only = train_adapter_model_only
 
         if args.client_optimizer == "sgd":
             self.local_optimizer_kd = torch.optim.SGD(self.local_model.parameters(), lr=args.lr)
@@ -28,12 +30,15 @@ class FedArjunModelTrainer(ModelTrainer):
             self.adapter_optimizer = torch.optim.SGD(self.adapter_model.parameters(), lr=args.lr)
 
         else:
-            self.local_optimizer_kd = torch.optim.Adam(filter(lambda p: p.requires_grad, self.local_model.parameters()), lr=args.lr,
-                                         weight_decay=args.wd, amsgrad=True)
-            self.local_optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, self.local_model.parameters()), lr=args.lr,
-                                         weight_decay=args.wd, amsgrad=True)
-            self.adapter_optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, self.adapter_model.parameters()), lr=args.lr,
-                                         weight_decay=args.wd, amsgrad=True)
+            self.local_optimizer_kd = torch.optim.Adam(filter(lambda p: p.requires_grad, self.local_model.parameters()),
+                                                       lr=args.lr,
+                                                       weight_decay=args.wd, amsgrad=True)
+            self.local_optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, self.local_model.parameters()),
+                                                    lr=args.lr,
+                                                    weight_decay=args.wd, amsgrad=True)
+            self.adapter_optimizer = torch.optim.Adam(
+                filter(lambda p: p.requires_grad, self.adapter_model.parameters()), lr=args.lr,
+                weight_decay=args.wd, amsgrad=True)
 
     def get_model_params(self):
         return self.adapter_model.cpu().state_dict()
@@ -59,28 +64,34 @@ class FedArjunModelTrainer(ModelTrainer):
             local_optimizer_kd = torch.optim.SGD(self.local_model.parameters(), lr=args.lr)
             local_optimizer = torch.optim.SGD(self.local_model.parameters(), lr=args.lr)
             adapter_optimizer = torch.optim.SGD(self.adapter_model.parameters(), lr=args.lr)
-        
+
         else:
-            local_optimizer_kd = torch.optim.Adam(filter(lambda p: p.requires_grad, self.local_model.parameters()), lr=args.lr,
-                                         weight_decay=args.wd, amsgrad=True)
-            local_optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, self.local_model.parameters()), lr=args.lr,
-                                         weight_decay=args.wd, amsgrad=True)
-            adapter_optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, self.adapter_model.parameters()), lr=args.lr,
-                                         weight_decay=args.wd, amsgrad=True)
+            local_optimizer_kd = torch.optim.Adam(filter(lambda p: p.requires_grad, self.local_model.parameters()),
+                                                  lr=args.lr,
+                                                  weight_decay=args.wd, amsgrad=True)
+            local_optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, self.local_model.parameters()),
+                                               lr=args.lr,
+                                               weight_decay=args.wd, amsgrad=True)
+            adapter_optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, self.adapter_model.parameters()),
+                                                 lr=args.lr,
+                                                 weight_decay=args.wd, amsgrad=True)
 
         # train and update assuming classification task
-        kd_criterion = Logits().to(device)
+        kd_criterion = SoftTarget(T=4).to(device)
         cls_criterion = nn.CrossEntropyLoss().to(device)
 
-        # 1. Transfer knowledge from adapter model to local model
-        self._knowledge_distillation(adapter_model, local_model, train_data, args.kd_epochs, local_optimizer_kd,
-                                     cls_criterion, kd_criterion, args.kd_lambda, device)
-        # # 2. Train local model
-        # self._train_loop(local_model, train_data, cls_criterion, args.epochs, local_optimizer, device)
+        if self.train_adapter_model_only:
+            self._train_loop(adapter_model, train_data, cls_criterion, args.epochs, adapter_optimizer, device)
+        else:
+            # 1. Transfer knowledge from adapter model to local model
+            self._knowledge_distillation(adapter_model, local_model, train_data, args.kd_epochs, local_optimizer_kd,
+                                         cls_criterion, kd_criterion, args.kd_lambda, device)
+            # # 2. Train local model
+            # self._train_loop(local_model, train_data, cls_criterion, args.epochs, local_optimizer, device)
 
-        # 3. Transfer knowledge from local model to adapter model
-        self._knowledge_distillation(local_model, adapter_model, train_data, args.kd_epochs, adapter_optimizer,
-                                     cls_criterion, kd_criterion, args.kd_lambda, device)
+            # 3. Transfer knowledge from local model to adapter model
+            self._knowledge_distillation(local_model, adapter_model, train_data, args.kd_epochs, adapter_optimizer,
+                                         cls_criterion, kd_criterion, args.kd_lambda, device)
 
     def _knowledge_distillation(self, teacher_model, student_model, transfer_set, epochs, optimizer, criterion,
                                 kd_criterion, kd_lambda, device):
