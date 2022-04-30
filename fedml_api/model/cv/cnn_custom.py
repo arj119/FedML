@@ -44,7 +44,8 @@ class CNNParameterised(torch.nn.Module):
         )
 
     def forward(self, x):
-        x = torch.unsqueeze(x, 1)
+        if len(x.shape) < 4:
+            x = torch.unsqueeze(x, 1)
         x = self.net(x)
         return x
 
