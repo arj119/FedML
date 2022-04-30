@@ -172,4 +172,4 @@ class HeterogeneousModelBaseTrainerAPI(ABC):
     def _plot_client_training_data_distribution(self):
         client_label_counts = [c.get_training_label_distribution() for c in self.client_list]
         client_training_label_count = {client_idx: label_count for client_idx, label_count in client_label_counts}
-        plot_label_distributions(client_training_label_count)
+        plot_label_distributions(client_training_label_count, alpha=self.args.partition_alpha)
