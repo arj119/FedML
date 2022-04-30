@@ -40,7 +40,6 @@ def add_args(parser):
 
 if __name__ == "__main__":
     args, device, dataset = setup(algorithm_name='FedArjun', add_custom_args=add_args)
-
     # create model.
     # Note if the model is DNN (e.g., ResNet), the training will be very slow.
     # In this case, please use our FedML distributed version (./fedml_experiments/distributed_fedavg)
@@ -49,9 +48,13 @@ if __name__ == "__main__":
 
     adapter_model = create_model(args, model_name=client_model_config['adapter_model'], output_dim=dataset[7])
     client_models = []
+    client_num = 0
     for entry in client_model_config['client_models']:
         model = create_model(args, model_name=entry['model'], output_dim=dataset[7])
         client_models.append((model, entry['freq']))
+        client_num += entry['freq']
+
+    args.client_num_in_total = client_num
 
     # model = create_model(args, model_name=args.model, output_dim=dataset[7])
     # model_trainer = custom_model_trainer(args, model)
