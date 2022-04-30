@@ -58,7 +58,7 @@ class FedArjunModelTrainer(ModelTrainer):
         """
         adapter_model, local_model = self.adapter_model.to(device), self.local_model.to(device)
 
-        train_data, kd_transfer_data = train_data
+        # train_data, kd_transfer_data = train_data
 
         if args.client_optimizer == "sgd":
             local_optimizer_kd = torch.optim.SGD(self.local_model.parameters(), lr=args.lr)
@@ -232,14 +232,14 @@ class FedArjunModelTrainer(ModelTrainer):
                Returns:
 
                """
-        model = self.local_model
+        model = self.adapter_model
         model.to(device)
 
-        train_data, kd_transfer_data = private_data
+        # train_data, kd_transfer_data = private_data
 
         # train and update
         criterion = nn.CrossEntropyLoss().to(device)
 
         # Transfer learning to private dataset
-        self._train_loop(model, train_data=train_data, criterion=criterion, epochs=args.pretrain_epochs_private,
+        self._train_loop(model, train_data=private_data, criterion=criterion, epochs=args.pretrain_epochs_private,
                          optimizer=self.adapter_optimizer, device=device)
