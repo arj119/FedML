@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from collections import defaultdict
 import logging
+import wandb
 
 def convert_to_list(data: dict):
     """
@@ -38,3 +39,5 @@ def plot_label_distributions(data, alpha=0.5):
     plt.title(f'Training Label Distribution $\\alpha = {alpha}$')
     plt.savefig('label_distribution.png')
     logging.info('----------- Saved Client Training Data Distribution ------------')
+    image = wandb.Image('label_distribution.png')
+    wandb.log({'Training Label Distribution': image})
