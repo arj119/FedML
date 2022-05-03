@@ -1,35 +1,18 @@
 import logging
 
 from fedml_api.standalone.fd_faug.model_trainer import FDFAugModelTrainer
+from fedml_api.standalone.utils.BaseClient import BaseClient
 
 
-class Client:
+class Client(BaseClient):
     def __init__(self, client_idx, local_training_data, local_test_data, local_sample_number, args, device,
                  model_trainer: FDFAugModelTrainer):
-        self.client_idx = client_idx
-        self.local_training_data = local_training_data
-        self.local_test_data = local_test_data
-        self.global_val_data = None
-        self.local_sample_number = local_sample_number
-        logging.info("self.local_sample_number = " + str(self.local_sample_number))
+        super().__init__(client_idx, local_training_data, local_test_data, local_sample_number, args, device,
+                         model_trainer)
 
-        self.args = args
-        self.device = device
-        self.model_trainer = model_trainer
         self.global_label_logits = None
 
-
-    def update_local_dataset(self, client_idx, local_training_data, local_test_data, global_val_data, local_sample_number):
-        self.client_idx = client_idx
-        self.local_training_data = local_training_data
-        self.local_test_data = local_test_data
-        self.global_val_data = global_val_data
-        self.local_sample_number = local_sample_number
-
-    def get_sample_number(self):
-        return self.local_sample_number
-
-    def train(self):
+    def train(self, w_global=None):
         return self.model_trainer.train(self.local_training_data, self.global_label_logits, self.device, self.args)
 
     def get_logits(self, public_data):
