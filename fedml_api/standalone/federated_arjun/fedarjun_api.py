@@ -22,7 +22,7 @@ class FedArjunAPI(HeterogeneousModelBaseTrainerAPI):
             args: Additional args
             client_models: List of client models and their frequency participating (assuming a stateful algorithm for simplicity)
         """
-        super().__init__(dataset, device, args, client_models, FedArjunModelTrainer, FedArjunClient)
+        super().__init__(dataset, device, args)
 
         self.global_model = MyModelTrainer(adapter_model)
 

@@ -18,7 +18,9 @@ ROUND=$8
 
 EPOCH=${9}
 
-OPT=${10}
+LR=${10}
+
+OPT=${11}
 
 CI=${12}
 
@@ -35,10 +37,10 @@ python3 ./main_federated_arjun.py \
 --dataset $DATASET \
 --data_dir $DATA_PATH \
 --partition_method $DISTRIBUTION  \
+--lr $LR \
 --client_optimizer $OPT \
 #--client_num_per_round $WORKER_NUM \
 #--client_num_in_total $CLIENT_NUM \
-#--lr $LR \
 #--ci $CI \
 #--comm_round $ROUND \
 #--batch_size $BATCH_SIZE \

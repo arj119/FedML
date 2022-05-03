@@ -25,12 +25,6 @@ class FedArjunClient(BaseClient):
             ################################################
         """)
 
-    def update_local_dataset(self, client_idx, local_training_data, local_test_data, local_sample_number):
-        self.client_idx = client_idx
-        self.local_training_data, _ = self.prepare_local_training_data(local_training_data)
-        self.local_test_data = local_test_data
-        self.local_sample_number = local_sample_number
-
     def prepare_local_training_data(self, local_training_data):
         if isinstance(local_training_data, list):
             dataset = TensorDataset(local_training_data[0][0], local_training_data[0][1])
@@ -54,4 +48,3 @@ class FedArjunClient(BaseClient):
 
         """
         self.model_trainer.pre_train(private_data=self.local_training_data, device=self.device, args=self.args)
-
