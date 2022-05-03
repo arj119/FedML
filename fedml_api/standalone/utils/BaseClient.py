@@ -12,15 +12,17 @@ class BaseClient:
         self.local_test_data: DataLoader = local_test_data
         self.local_sample_number = local_sample_number
         logging.info("self.local_sample_number = " + str(self.local_sample_number))
+        self.global_val_data = None
 
         self.args = args
         self.device = device
         self.model_trainer = model_trainer
 
-    def update_local_dataset(self, client_idx, local_training_data, local_test_data, local_sample_number):
+    def update_local_dataset(self, client_idx, local_training_data, local_test_data, global_val_data, local_sample_number):
         self.client_idx = client_idx
         self.local_training_data = local_training_data
         self.local_test_data = local_test_data
+        self.global_val_data = global_val_data
         self.local_sample_number = local_sample_number
 
     def get_sample_number(self):
@@ -32,12 +34,13 @@ class BaseClient:
         weights = self.model_trainer.get_model_params()
         return weights
 
-    def local_test(self, b_use_test_dataset):
-        if b_use_test_dataset:
+    def local_test(self, data='test'):
+        if data == 'test':
             test_data = self.local_test_data
+        elif data == 'val':
+            test_data = self.global_val_data
         else:
             test_data = self._get_training_data_from_tuple()
-
         metrics = self.model_trainer.test(test_data, self.device, self.args)
         return metrics
 

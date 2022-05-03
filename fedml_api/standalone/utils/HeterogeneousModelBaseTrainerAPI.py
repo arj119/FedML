@@ -12,8 +12,7 @@ from fedml_api.standalone.utils.plot import plot_label_distributions
 
 
 class HeterogeneousModelBaseTrainerAPI(ABC):
-    def __init__(self, dataset, device, args, client_models: List[Tuple[torch.nn.Module, int]], model_trainer_builder,
-                 client_builder):
+    def __init__(self, dataset, device, args):
         """
         Args:
             dataset: Dataset presplit into data loaders
@@ -100,13 +99,13 @@ class HeterogeneousModelBaseTrainerAPI(ABC):
             the training client number is larger than the testing client number
             """
             # train data
-            train_local_metrics = client.local_test(False)
+            train_local_metrics = client.local_test('train')
             train_metrics['num_samples'].append(copy.deepcopy(train_local_metrics['test_total']))
             train_metrics['num_correct'].append(copy.deepcopy(train_local_metrics['test_correct']))
             train_metrics['losses'].append(copy.deepcopy(train_local_metrics['test_loss']))
 
             # test data
-            test_local_metrics = client.local_test(True)
+            test_local_metrics = client.local_test('test')
             test_metrics['num_samples'].append(copy.deepcopy(test_local_metrics['test_total']))
             test_metrics['num_correct'].append(copy.deepcopy(test_local_metrics['test_correct']))
             test_metrics['losses'].append(copy.deepcopy(test_local_metrics['test_loss']))
@@ -144,9 +143,9 @@ class HeterogeneousModelBaseTrainerAPI(ABC):
             self._generate_validation_set()
 
         client = self.client_list[0]
-        client.update_local_dataset(0, None, self.val_global, None)
+        client.update_local_dataset(0, None, None, self.val_global, None)
         # test data
-        test_metrics = client.local_test(True)
+        test_metrics = client.local_test('val')
 
         if self.args.dataset == "stackoverflow_nwp":
             test_acc = test_metrics['test_correct'] / test_metrics['test_total']
