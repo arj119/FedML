@@ -8,9 +8,11 @@ from fedml_api.standalone.utils.BaseClient import BaseClient
 
 class FedArjunClient(BaseClient):
 
-    def __init__(self, client_idx, local_training_data, local_test_data, local_sample_number, args, device,
+    def __init__(self, client_idx, local_training_data, local_test_data, local_sample_number, global_test_data, args,
+                 device,
                  model_trainer: FedArjunModelTrainer):
-        super().__init__(client_idx, local_training_data, local_test_data, local_sample_number, args, device,
+        super().__init__(client_idx, local_training_data, local_test_data, local_sample_number, global_test_data, args,
+                         device,
                          model_trainer)
 
         # self.local_training_data, sizes = self.prepare_local_training_data(local_training_data)

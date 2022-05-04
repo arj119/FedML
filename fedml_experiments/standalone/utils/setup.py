@@ -23,7 +23,7 @@ def setup(algorithm_name, add_custom_args):
 
     wandb.init(
         project="fedml",
-        name="FedArjun-r" + str(args.comm_round) + "-e" + str(args.epochs) + "-lr" + str(args.lr),
+        name=f"{algorithm_name}-r" + str(args.comm_round) + "-e" + str(args.epochs) + "-lr" + str(args.lr),
         config=args
     )
 
