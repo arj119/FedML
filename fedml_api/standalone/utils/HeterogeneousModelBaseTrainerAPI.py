@@ -93,6 +93,13 @@ class HeterogeneousModelBaseTrainerAPI(ABC):
             'losses': []
         }
 
+        global_test_metrics = {
+            'num_samples': [],
+            'num_correct': [],
+            'losses': []
+        }
+
+
         for client in self.client_list:
             """
             Note: for datasets like "fed_CIFAR100" and "fed_shakespheare",
@@ -110,6 +117,12 @@ class HeterogeneousModelBaseTrainerAPI(ABC):
             test_metrics['num_correct'].append(copy.deepcopy(test_local_metrics['test_correct']))
             test_metrics['losses'].append(copy.deepcopy(test_local_metrics['test_loss']))
 
+            # global test data
+            global_metrics = client.local_test('global_test')
+            global_test_metrics['num_samples'].append(copy.deepcopy(global_metrics['test_total']))
+            global_test_metrics['num_correct'].append(copy.deepcopy(global_metrics['test_correct']))
+            global_test_metrics['losses'].append(copy.deepcopy(global_metrics['test_loss']))
+
             """
             Note: CI environment is CPU-based computing. 
             The training speed for RNN training is to slow in this setting, so we only test a client to make sure there is no programming error.
@@ -125,14 +138,23 @@ class HeterogeneousModelBaseTrainerAPI(ABC):
         test_acc = sum(test_metrics['num_correct']) / sum(test_metrics['num_samples'])
         test_loss = sum(test_metrics['losses']) / sum(test_metrics['num_samples'])
 
+        # test on global test dataset
+        global_test_acc = sum(global_test_metrics['num_correct']) / sum(global_test_metrics['num_samples'])
+        global_test_loss = sum(global_test_metrics['losses']) / sum(global_test_metrics['num_samples'])
+
         stats = {'training_acc': train_acc, 'training_loss': train_loss}
-        wandb.log({"Train/Acc": train_acc, "round": round_idx})
-        wandb.log({"Train/Loss": train_loss, "round": round_idx})
+        wandb.log({"Train/Acc": train_acc, "Round": round_idx})
+        wandb.log({"Train/Loss": train_loss, "Round": round_idx})
         logging.info(stats)
 
         stats = {'test_acc': test_acc, 'test_loss': test_loss}
-        wandb.log({"Test/Acc": test_acc, "round": round_idx})
-        wandb.log({"Test/Loss": test_loss, "round": round_idx})
+        wandb.log({"Test/Acc": test_acc, "Round": round_idx})
+        wandb.log({"Test/Loss": test_loss, "Round": round_idx})
+        logging.info(stats)
+
+        stats = {'global_test_acc': global_test_acc, 'global_test_loss': global_test_loss}
+        wandb.log({"Global Test/Acc": global_test_acc, "Round": round_idx})
+        wandb.log({"Global Test/Loss": global_test_loss, "Round": round_idx})
         logging.info(stats)
 
     def _local_test_on_validation_set(self, round_idx):

@@ -5,7 +5,7 @@ import torch
 
 class BaseClient:
 
-    def __init__(self, client_idx, local_training_data, local_test_data, local_sample_number, args, device,
+    def __init__(self, client_idx, local_training_data, local_test_data, local_sample_number, global_test_data, args, device,
                  model_trainer):
         self.client_idx = client_idx
         self.local_training_data: DataLoader = local_training_data
@@ -13,6 +13,7 @@ class BaseClient:
         self.local_sample_number = local_sample_number
         logging.info("self.local_sample_number = " + str(self.local_sample_number))
         self.global_val_data = None
+        self.global_test_data = global_test_data
 
         self.args = args
         self.device = device
@@ -29,9 +30,11 @@ class BaseClient:
         return self.local_sample_number
 
     def train(self, w_global):
+        logging.info(f'### Training Client {self.client_idx} ###')
         self.model_trainer.set_model_params(w_global)
         self.model_trainer.train(self.local_training_data, self.device, self.args)
         weights = self.model_trainer.get_model_params()
+        logging.info(f'### Training Client {self.client_idx} (complete) ###')
         return weights
 
     def local_test(self, data='test'):
@@ -39,6 +42,8 @@ class BaseClient:
             test_data = self.local_test_data
         elif data == 'val':
             test_data = self.global_val_data
+        elif data == 'global_test':
+            test_data = self.global_test_data
         else:
             test_data = self._get_training_data_from_tuple()
         metrics = self.model_trainer.test(test_data, self.device, self.args)
