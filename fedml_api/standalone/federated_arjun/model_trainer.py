@@ -13,7 +13,7 @@ except ImportError:
 
 
 class FedArjunModelTrainer(ModelTrainer):
-    def __init__(self, adapter_model, local_model, args, train_adapter_model_only=False):
+    def __init__(self, adapter_model, local_model, args, train_adapter_model_only=True):
         """
         Args:
             adapter_model: Homogeneous model between clients that acts as knowledge transfer vehicle.
@@ -83,15 +83,21 @@ class FedArjunModelTrainer(ModelTrainer):
         if self.train_adapter_model_only:
             self._train_loop(adapter_model, train_data, cls_criterion, args.epochs, adapter_optimizer, device)
         else:
+            logging.info(f'Transfer Knowledge from adapter model to local model')
+
             # 1. Transfer knowledge from adapter model to local model
             self._knowledge_distillation(adapter_model, local_model, train_data, args.kd_epochs, local_optimizer_kd,
-                                         cls_criterion, kd_criterion, args.kd_lambda, device)
-            # # 2. Train local model
-            # self._train_loop(local_model, train_data, cls_criterion, args.epochs, local_optimizer, device)
+                                         cls_criterion, kd_criterion, 1, device)
 
+            logging.info(f'Train local model')
+
+            # # 2. Train local model
+            self._train_loop(local_model, train_data, cls_criterion, args.epochs, local_optimizer, device)
+
+            logging.info(f'Transfer knowledge from local model to adapter model')
             # 3. Transfer knowledge from local model to adapter model
             self._knowledge_distillation(local_model, adapter_model, train_data, args.kd_epochs, adapter_optimizer,
-                                         cls_criterion, kd_criterion, args.kd_lambda, device)
+                                         cls_criterion, kd_criterion, 1, device)
 
     def _knowledge_distillation(self, teacher_model, student_model, transfer_set, epochs, optimizer, criterion,
                                 kd_criterion, kd_lambda, device):
@@ -123,9 +129,9 @@ class FedArjunModelTrainer(ModelTrainer):
 
                 # Knowledge Distillation Loss
                 teacher_output = teacher_model(x).detach()
-                kd_loss = kd_lambda * kd_criterion(teacher_output, student_output)
+                kd_loss = kd_criterion(teacher_output, student_output)
 
-                loss = task_loss + kd_loss
+                loss = (1 - kd_lambda) * task_loss + kd_lambda * kd_loss
 
                 loss.backward()
 
@@ -168,7 +174,7 @@ class FedArjunModelTrainer(ModelTrainer):
         return epoch_loss
 
     def test(self, test_data, device, args=None):
-        model = self.local_model.to(device)
+        model = self.adapter_model.to(device) if self.train_adapter_model_only else self.local_model.to(device)
         model.eval()
 
         metrics = {
@@ -232,7 +238,7 @@ class FedArjunModelTrainer(ModelTrainer):
                Returns:
 
                """
-        model = self.adapter_model
+        model = self.local_model
         model.to(device)
 
         # train_data, kd_transfer_data = private_data
@@ -242,4 +248,4 @@ class FedArjunModelTrainer(ModelTrainer):
 
         # Transfer learning to private dataset
         self._train_loop(model, train_data=private_data, criterion=criterion, epochs=args.pretrain_epochs_private,
-                         optimizer=self.adapter_optimizer, device=device)
+                         optimizer=self.local_optimizer, device=device)
