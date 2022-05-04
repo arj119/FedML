@@ -26,7 +26,7 @@ def add_args(parser):
     parser.add_argument('--transfer_set_percentage', type=float, default=0,
                         help='Percentage of local training data to be used for knowledge distillation.')
 
-    parser.add_argument('--pretrain_epochs_private', type=int, default=0,
+    parser.add_argument('--pretrain_epochs_private', type=int, default=15,
                         help='Number of pre-training epochs to be done by each client on the private dataset during'
                              ' transfer learning')
 
