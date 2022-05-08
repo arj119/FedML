@@ -52,12 +52,14 @@ class FedMDAPI(HeterogeneousModelBaseTrainerAPI):
                        client_models):
         logging.info("############setup_clients (START)#############")
 
-        for client_idx, (model, freq) in enumerate(client_models):
+        c_idx = 0
+        for model, freq in client_models:
             for i in range(freq):
                 model_trainer = FedMLModelTrainer(copy.deepcopy(model))
-                c = Client(client_idx, train_data_local_dict[client_idx], test_data_local_dict[client_idx],
-                           train_data_local_num_dict[client_idx], self.test_global, self.args, self.device, model_trainer)
+                c = Client(c_idx, train_data_local_dict[self.start_local_client_idx + c_idx], test_data_local_dict[self.start_local_client_idx + c_idx],
+                           train_data_local_num_dict[self.start_local_client_idx + c_idx], self.test_global, self.args, self.device, model_trainer)
                 self.client_list.append(c)
+                c_idx += 1
 
         logging.info("############setup_clients (END)#############")
 

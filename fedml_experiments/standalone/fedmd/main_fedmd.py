@@ -17,10 +17,10 @@ def add_args(parser):
     return a parser added with args required by fit
     """
     # FedMD arguments
-    parser.add_argument('--public_dataset_size', type=int, default=1000,
+    parser.add_argument('--public_dataset_size', type=int, default=5000,
                         help='Size of the public dataset that should be created')
 
-    parser.add_argument('--pretrain_epochs_public', type=int, default=5,
+    parser.add_argument('--pretrain_epochs_public', type=int, default=20,
                         help='Number of pre-training epochs to be done by each client on the public dataset')
 
     parser.add_argument('--pretrain_epochs_private', type=int, default=5,
