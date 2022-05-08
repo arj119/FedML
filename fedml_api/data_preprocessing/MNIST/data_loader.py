@@ -70,6 +70,7 @@ def batch_data(data, batch_size):
         batched_x = data_x[i:i + batch_size]
         batched_y = data_y[i:i + batch_size]
         batched_x = torch.from_numpy(np.asarray(batched_x)).float()
+        batched_x = batched_x.reshape(-1, 1, 28, 28)
         batched_y = torch.from_numpy(np.asarray(batched_y)).long()
         batch_data.append((batched_x, batched_y))
     return batch_data
