@@ -57,3 +57,18 @@ class BaseClient:
     def _get_training_data_from_tuple(self):
         return self.local_training_data[0] if isinstance(self.local_training_data,
                                                          tuple) else self.local_training_data
+
+    def get_dataset_size(self, dataset='train'):
+        if dataset == 'train':
+            set = self._get_training_data_from_tuple()
+        elif dataset == 'test':
+            set = self.local_test_data
+        else:
+            raise NotImplementedError()
+
+        if isinstance(set, torch.utils.data.DataLoader):
+            size = len(set.dataset)
+        else:
+            size = len(set)
+
+        return size

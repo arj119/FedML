@@ -2,8 +2,6 @@ import copy
 import logging
 import random
 from abc import ABC, abstractmethod
-from typing import List, Tuple
-
 import numpy as np
 import torch
 import wandb
@@ -99,7 +97,6 @@ class HeterogeneousModelBaseTrainerAPI(ABC):
             'losses': []
         }
 
-
         for client in self.client_list:
             """
             Note: for datasets like "fed_CIFAR100" and "fed_shakespheare",
@@ -191,6 +188,12 @@ class HeterogeneousModelBaseTrainerAPI(ABC):
         logging.info(stats)
 
     def _plot_client_training_data_distribution(self):
+        columns = ['Client Idx', 'Sample Number', 'Training Dataset Size', 'Test Dataset Size']
+        table_data = [[c.client_idx, c.local_sample_number, c.get_dataset_size('train'), c.get_dataset_size('test')] for c in
+                      self.client_list]
+        wandb.log({'Client Dataset Size Distribution': wandb.Table(columns=columns, data=table_data)})
+
+
         client_label_counts = [c.get_training_label_distribution() for c in self.client_list]
         client_training_label_count = {client_idx: label_count for client_idx, label_count in client_label_counts}
         plot_label_distributions(client_training_label_count, alpha=self.args.partition_alpha)
