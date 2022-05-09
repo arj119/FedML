@@ -14,3 +14,6 @@ run-federated_arjun-experiments:
 
 run-fd_faug-experiments:
 	./fd_faug.sh
+
+run-fedssgan-experiments:
+	./fedssgan.sh
