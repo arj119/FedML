@@ -4,7 +4,7 @@ install:
 	./CI-install.sh
 
 run-fedavg-experiments:
-	./fedavg-run.sh
+	./fedavg_multiclient.sh
 
 run-fedmd-experiments:
 	./fedmd.sh
