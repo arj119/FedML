@@ -40,6 +40,13 @@ class FedSSGANClient(BaseClient):
                 DataLoader(transfer, batch_size=self.args.batch_size)), \
                (len_local_dataset - transfer_set_size, transfer_set_size)
 
+    def train(self, w_global, communication_round=0):
+        weights = super(FedSSGANClient, self).train(w_global)
+        self.model_trainer.log_gan_images(
+            caption=f'Client {self.client_idx}, communication round: {communication_round}',
+            client_id=self.client_idx)
+        return weights
+
     def pre_train(self):
         """
 

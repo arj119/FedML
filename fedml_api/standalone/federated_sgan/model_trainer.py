@@ -3,6 +3,8 @@ import logging
 import torch
 from torch import nn
 import torchvision.transforms as tfs
+from torchvision.utils import make_grid
+import wandb
 
 from fedml_api.model.cv.generator import Generator
 
@@ -22,6 +24,32 @@ class FedSSGANModelTrainer(ModelTrainer):
         super().__init__(generator)
         self.generator: Generator = generator
         self.local_model = local_model
+        self.fixed_noise = generator.generate_noise_vector(16, device='cpu')
+        self.resize = tfs.Resize(32)
+
+        self.mean = torch.Tensor([0.5])
+        self.std = torch.Tensor([0.5])
+
+        self.transforms = torch.nn.Sequential(
+            tfs.Resize(32),
+            tfs.Normalize(mean=self.mean, std=self.std),
+        )
+
+    def denorm(self, x, channels=None, w=None, h=None, resize=False, device='cpu'):
+        unnormalize = tfs.Normalize((-self.mean / self.std).tolist(), (1.0 / self.std).tolist()).to(device)
+        x = unnormalize(x)
+        if resize:
+            if channels is None or w is None or h is None:
+                print('Number of channels, width and height must be provided for resize.')
+            x = x.view(x.size(0), channels, w, h)
+        return x
+
+    def log_gan_images(self, caption, client_id):
+        images = make_grid(self.denorm(self.generator(self.fixed_noise)), nrow=8, padding=2, normalize=False,
+                           range=None,
+                           scale_each=False, pad_value=0)
+        images = wandb.Image(images, caption=caption)
+        wandb.log({f"Generator Outputs {client_id}": images})
 
     def get_model_params(self):
         return self.generator.cpu().state_dict()
@@ -46,17 +74,27 @@ class FedSSGANModelTrainer(ModelTrainer):
             optimiser_D = torch.optim.SGD(self.local_model.parameters(), lr=args.lr)
 
         else:
+            beta1, beta2 = 0.5, 0.999
             optimiser_G = torch.optim.Adam(filter(lambda p: p.requires_grad, self.generator.parameters()),
                                            lr=args.lr,
-                                           weight_decay=args.wd, amsgrad=True)
+                                           weight_decay=args.wd,
+                                           amsgrad=True,
+                                           betas=(beta1, beta2)
+                                           )
             optimiser_D = torch.optim.Adam(filter(lambda p: p.requires_grad, self.local_model.parameters()),
                                            lr=args.lr,
-                                           weight_decay=args.wd, amsgrad=True)
+                                           weight_decay=args.wd,
+                                           amsgrad=True,
+                                           betas=(beta1, beta2)
+                                           )
 
         # train and update assuming classification task
         self._gan_training(generator, local_model, train_data, None, args.epochs, optimiser_G, optimiser_D, device)
         # self._train_loop(generator, train_data, None, args.epochs, optimiser_D, device)
 
+    def log_sum_exp(self, x, axis=1):
+        m = torch.max(x, dim=1)[0]
+        return m + torch.log(torch.sum(torch.exp(x - m.unsqueeze(1)), dim=axis))
 
     def _gan_training(self, generator, discriminator, labelled_data, unlabelled_data, epochs, optimizer_G, optimizer_D,
                       device):
@@ -71,7 +109,7 @@ class FedSSGANModelTrainer(ModelTrainer):
         unsupervised_loss = nn.BCEWithLogitsLoss().to(device)
         supervised_loss = nn.CrossEntropyLoss().to(device)
 
-        resize = tfs.Resize(32).to(device)
+        transforms = self.transforms.to(device)
 
         epoch_loss_D = []
         epoch_loss_G = []
@@ -80,7 +118,7 @@ class FedSSGANModelTrainer(ModelTrainer):
 
             for batch_idx, (real, labels) in enumerate(labelled_data):
                 real, labels = real.to(device), labels.to(device)
-                real = resize(real)
+                real = transforms(real)
                 b_size = real.size(0)
 
                 generator.zero_grad()
@@ -99,12 +137,12 @@ class FedSSGANModelTrainer(ModelTrainer):
 
                 # update unsupervised discriminator (adv)
                 # Real examples
-                gan_logits_real = torch.logsumexp(discriminator(real), dim=-1)
+                gan_logits_real = self.log_sum_exp(discriminator(real))
                 errD_real = unsupervised_loss(gan_logits_real, label_real_adv)
 
                 # Fake examples
                 fake = generator.generate(b_size, device)
-                gan_logits_fake = torch.logsumexp(discriminator(fake.detach()), dim=-1)
+                gan_logits_fake = self.log_sum_exp(discriminator(fake.detach()))
                 errD_fake = unsupervised_loss(gan_logits_fake.view(-1), label_fake_adv)
 
                 D_unsup_loss = 0.5 * (errD_real + errD_fake)
@@ -114,7 +152,7 @@ class FedSSGANModelTrainer(ModelTrainer):
 
                 """ Update Generator """
                 class_logits = discriminator(fake)
-                gan_logits = torch.logsumexp(class_logits, dim=-1)
+                gan_logits = self.log_sum_exp(class_logits)
 
                 G_loss = unsupervised_loss(gan_logits.view(-1), label_real_adv)
                 G_loss.backward()
@@ -149,7 +187,7 @@ class FedSSGANModelTrainer(ModelTrainer):
         """
 
         model.train()
-        resize = tfs.Resize(32).to(device)
+        transforms = self.transforms.to(device)
         criterion = nn.CrossEntropyLoss().to(device)
 
         epoch_loss = []
@@ -157,7 +195,7 @@ class FedSSGANModelTrainer(ModelTrainer):
             batch_loss = []
             for batch_idx, (x, labels) in enumerate(train_data):
                 x, labels = x.to(device), labels.to(device)
-                x = resize(x)
+                x = transforms(x)
 
                 model.zero_grad()
                 output = model(x)  # in classification case will be logits
@@ -172,6 +210,8 @@ class FedSSGANModelTrainer(ModelTrainer):
     def test(self, test_data, device, args=None):
         model = self.local_model.to(device)
         model.eval()
+
+        transforms = self.transforms.to(device)
 
         metrics = {
             'test_correct': 0,
@@ -195,6 +235,7 @@ class FedSSGANModelTrainer(ModelTrainer):
         with torch.no_grad():
             for batch_idx, (x, target) in enumerate(test_data):
                 x = x.to(device)
+                x = transforms(x)
                 target = target.to(device)
                 pred = model(x)
                 loss = criterion(pred, target)

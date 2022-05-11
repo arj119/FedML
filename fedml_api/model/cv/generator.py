@@ -10,11 +10,20 @@ class Generator(ABC, nn.Module):
         self.nz = nz
         self.img_size = img_size
 
-    def _generate_noise_vector(self, b_size, device):
+    def generate_noise_vector(self, b_size, device):
         return torch.randn(b_size, self.nz, 1, 1, device=device)
 
     def generate(self, b_size, device):
-        return self.forward(self._generate_noise_vector(b_size, device))
+        return self.forward(self.generate_noise_vector(b_size, device))
+
+    # custom weights initialization called on netG and netD
+    def weights_init(self):
+        classname = self.__class__.__name__
+        if classname.find('Conv') != -1:
+            self.weight.data.normal_(0.0, 0.02)
+        elif classname.find('BatchNorm') != -1:
+            self.weight.data.normal_(1.0, 0.02)
+            self.bias.data.fill_(0)
 
 
 class ImageGenerator(Generator):
@@ -43,6 +52,8 @@ class ImageGenerator(Generator):
         self.main.add_module('end', nn.Sequential(
             nn.ConvTranspose2d(ngf, nc, kernel_size=4, stride=2, padding=1, bias=False),
             nn.Tanh(), ))
+
+        self.weights_init()
 
     def _block(self, in_channels, out_channels, kernel_size, stride, padding):
         return nn.Sequential(
