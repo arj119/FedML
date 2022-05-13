@@ -17,6 +17,7 @@ class FedSSGANClient(BaseClient):
 
         # self.local_training_data, sizes = self.prepare_local_training_data(local_training_data)
         self.local_training_data = local_training_data
+        self.local_synthetic_data = None
 
         logging.info("self.local_sample_number = " + str(self.local_sample_number))
         logging.info(f"""
@@ -41,10 +42,14 @@ class FedSSGANClient(BaseClient):
                (len_local_dataset - transfer_set_size, transfer_set_size)
 
     def train(self, w_global, communication_round=0):
-        weights = super(FedSSGANClient, self).train(w_global)
+        logging.info(f'### Training Client {self.client_idx} ###')
+        self.model_trainer.set_model_params(w_global)
+        self.model_trainer.train((self.local_training_data, self.local_synthetic_data), self.device, self.args)
+        weights = self.model_trainer.get_model_params()
         self.model_trainer.log_gan_images(
             caption=f'Client {self.client_idx}, communication round: {communication_round}',
             client_id=self.client_idx)
+        logging.info(f'### Training Client {self.client_idx} (complete) ###')
         return weights
 
     def pre_train(self):
@@ -57,3 +62,11 @@ class FedSSGANClient(BaseClient):
 
         """
         self.model_trainer.pre_train(private_data=self.local_training_data, device=self.device, args=self.args)
+
+    def update_synthetic_dataset(self):
+        size = self.get_dataset_size('train') * 5
+        batch_size = size // len(self.local_training_data)
+        synthetic_dataset = self.model_trainer.generate_synthetic_dataset(size, batch_size)
+        logging.info(f'Client: {self.client_idx} created synthetic dataset of size: {size}, batch size {batch_size}')
+        self.local_synthetic_data = synthetic_dataset
+

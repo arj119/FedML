@@ -64,11 +64,14 @@ class FedSSGANAPI(HeterogeneousModelBaseTrainerAPI):
 
             w_locals = []
 
+            client: FedSSGANClient
             for idx, client in enumerate(self.client_list):
                 # Local round
                 w = client.train(copy.deepcopy(w_global), round_idx)
                 # self.logger.info("local weights = " + str(w))
                 w_locals.append((client.get_sample_number(), copy.deepcopy(w)))
+
+                client.update_synthetic_dataset()
 
             # update global weights
             w_global = self._aggregate(w_locals)

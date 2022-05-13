@@ -5,6 +5,7 @@ from torch import nn
 import torchvision.transforms as tfs
 from torchvision.utils import make_grid
 import wandb
+from torch.utils.data import TensorDataset, DataLoader
 
 from fedml_api.model.cv.generator import Generator
 
@@ -61,7 +62,7 @@ class FedSSGANModelTrainer(ModelTrainer):
         """
 
         Args:
-            train_data: Tuple of (train_data, kd_transfer_data).
+            train_data: Tuple of (labelled_data, unlabelled_data).
             device: Device to perform training on
             args: Other args
         Returns:
@@ -88,8 +89,10 @@ class FedSSGANModelTrainer(ModelTrainer):
                                            betas=(beta1, beta2)
                                            )
 
-        # train and update assuming classification task
-        self._gan_training(generator, local_model, train_data, None, args.epochs, optimiser_G, optimiser_D, device)
+        labelled_data, unlabelled_data = train_data
+
+        self._gan_training(generator, local_model, labelled_data, unlabelled_data, args.epochs, optimiser_G,
+                           optimiser_D, device)
         # self._train_loop(generator, train_data, None, args.epochs, optimiser_D, device)
 
     def log_sum_exp(self, x, axis=1):
@@ -103,23 +106,39 @@ class FedSSGANModelTrainer(ModelTrainer):
 
         real_label, fake_label = 1, 0
 
-        # train_data = labelled_data if unlabelled_data is None else zip()
+        # train_data = labelled_data if unlabelled_data is None else zip(labelled_data, unlabelled_data)
 
         # Initialize BCELoss function
         unsupervised_loss = nn.BCEWithLogitsLoss().to(device)
         supervised_loss = nn.CrossEntropyLoss().to(device)
-
+        torch.autograd.set_detect_anomaly(True)
         transforms = self.transforms.to(device)
 
         epoch_loss_D = []
         epoch_loss_G = []
         for epoch in range(epochs):
             batch_loss_D, batch_loss_G = [], []
+            # train_data = labelled_data if unlabelled_data is None else zip(labelled_data, unlabelled_data)
+            for batch_idx, data in enumerate(
+                    labelled_data if unlabelled_data is None else zip(labelled_data, unlabelled_data)):
+                if unlabelled_data is not None:
+                    (real, labels), ulreal = data
+                    ulreal = ulreal[0]  # zip packs iterables of varying length in to tuples so ulreal becomes [ulreal]
+                    real, labels, ulreal = real.to(device), labels.to(device), ulreal.to(device)
+                    real = torch.unsqueeze(real, 1) if len(
+                        real.shape) < 4 else real  # 1 channel datasets miss second dim
+                    real = transforms(real)
+                    with torch.no_grad():
+                        unlabelled_real = torch.cat((real, ulreal), dim=0)
+                else:
+                    real, labels = data
+                    real, labels = real.to(device), labels.to(device)
+                    real = transforms(real)
+                    unlabelled_real = real
 
-            for batch_idx, (real, labels) in enumerate(labelled_data):
-                real, labels = real.to(device), labels.to(device)
-                real = transforms(real)
-                b_size = real.size(0)
+                unlabelled_real = unlabelled_real.to(device)
+                # real = transforms(real)
+                b_size = unlabelled_real.size(0)
 
                 generator.zero_grad()
                 discriminator.zero_grad()
@@ -137,7 +156,7 @@ class FedSSGANModelTrainer(ModelTrainer):
 
                 # update unsupervised discriminator (adv)
                 # Real examples
-                gan_logits_real = self.log_sum_exp(discriminator(real))
+                gan_logits_real = self.log_sum_exp(discriminator(unlabelled_real))
                 errD_real = unsupervised_loss(gan_logits_real, label_real_adv)
 
                 # Fake examples
@@ -286,3 +305,10 @@ class FedSSGANModelTrainer(ModelTrainer):
         # # Transfer learning to private dataset
         # self._train_loop(model, train_data=private_data, criterion=criterion, epochs=args.pretrain_epochs_private,
         #                  optimizer=self.local_optimizer, device=device)
+
+    def generate_synthetic_dataset(self, size, batch_size):
+        self.generator.eval()
+        generated_images = self.generator.generate(size, device='cpu')
+        dataset = TensorDataset(generated_images)
+        data_loader = DataLoader(dataset, batch_size=batch_size)
+        return data_loader
