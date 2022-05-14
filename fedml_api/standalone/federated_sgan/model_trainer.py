@@ -6,6 +6,7 @@ import torchvision.transforms as tfs
 from torchvision.utils import make_grid
 import wandb
 from torch.utils.data import TensorDataset, DataLoader
+from itertools import cycle
 
 from fedml_api.model.cv.generator import Generator
 
@@ -120,7 +121,7 @@ class FedSSGANModelTrainer(ModelTrainer):
             batch_loss_D, batch_loss_G = [], []
             # train_data = labelled_data if unlabelled_data is None else zip(labelled_data, unlabelled_data)
             for batch_idx, data in enumerate(
-                    labelled_data if unlabelled_data is None else zip(labelled_data, unlabelled_data)):
+                    labelled_data if unlabelled_data is None else zip(labelled_data, cycle(unlabelled_data))):
                 if unlabelled_data is not None:
                     (real, labels), ulreal = data
                     ulreal = ulreal[0]  # zip packs iterables of varying length in to tuples so ulreal becomes [ulreal]
@@ -306,9 +307,24 @@ class FedSSGANModelTrainer(ModelTrainer):
         # self._train_loop(model, train_data=private_data, criterion=criterion, epochs=args.pretrain_epochs_private,
         #                  optimizer=self.local_optimizer, device=device)
 
-    def generate_synthetic_dataset(self, size, batch_size):
-        self.generator.eval()
-        generated_images = self.generator.generate(size, device='cpu')
-        dataset = TensorDataset(generated_images)
+    def generate_synthetic_dataset(self, target_size, num_batches, real_score_threshold=0.7, device='cpu'):
+        generator, discriminator = self.generator.to(device), self.local_model.to(device)
+        generator.eval()
+        discriminator.eval()
+        generated_images = generator.generate(target_size, device=device)
+
+        # Filter by realness score to select best generated images
+        real_scores = self._discriminator_output(discriminator(generated_images))
+        mask = real_scores >= real_score_threshold
+        good_generated_images = generated_images[mask]
+
+        # If generator is not good enough do not create synthetic dataset
+        size = good_generated_images.size(0)
+        if size == 0:
+            return None, 0, 0
+
+        batch_size = size // num_batches if size > num_batches else size
+
+        dataset = TensorDataset(good_generated_images)
         data_loader = DataLoader(dataset, batch_size=batch_size)
-        return data_loader
+        return data_loader, size, batch_size
