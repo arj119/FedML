@@ -95,21 +95,21 @@ class FedSSGANModelTrainer(ModelTrainer):
                            optimiser_D, device)
         # self._train_loop(generator, train_data, None, args.epochs, optimiser_D, device)
 
-    def log_sum_exp(self, x, axis=1):
-        m = torch.max(x, dim=1)[0]
-        return m + torch.log(torch.sum(torch.exp(x - m.unsqueeze(1)), dim=axis))
+    def _discriminator_output(self, logits):
+        Z_x = torch.logsumexp(logits, dim=-1)
+        return torch.sigmoid(Z_x / (Z_x + 1))
 
     def _gan_training(self, generator, discriminator, labelled_data, unlabelled_data, epochs, optimizer_G, optimizer_D,
                       device):
         generator.train()
         discriminator.train()
 
-        real_label, fake_label = 1, 0
+        real_label, fake_label = 1, 0 # Soft labels
 
         # train_data = labelled_data if unlabelled_data is None else zip(labelled_data, unlabelled_data)
 
         # Initialize BCELoss function
-        unsupervised_loss = nn.BCEWithLogitsLoss().to(device)
+        unsupervised_loss = nn.BCELoss().to(device)
         supervised_loss = nn.CrossEntropyLoss().to(device)
         torch.autograd.set_detect_anomaly(True)
         transforms = self.transforms.to(device)
@@ -156,12 +156,12 @@ class FedSSGANModelTrainer(ModelTrainer):
 
                 # update unsupervised discriminator (adv)
                 # Real examples
-                gan_logits_real = self.log_sum_exp(discriminator(unlabelled_real))
+                gan_logits_real = self._discriminator_output(discriminator(unlabelled_real))
                 errD_real = unsupervised_loss(gan_logits_real, label_real_adv)
 
                 # Fake examples
                 fake = generator.generate(b_size, device)
-                gan_logits_fake = self.log_sum_exp(discriminator(fake.detach()))
+                gan_logits_fake = self._discriminator_output(discriminator(fake.detach()))
                 errD_fake = unsupervised_loss(gan_logits_fake.view(-1), label_fake_adv)
 
                 D_unsup_loss = 0.5 * (errD_real + errD_fake)
@@ -171,7 +171,7 @@ class FedSSGANModelTrainer(ModelTrainer):
 
                 """ Update Generator """
                 class_logits = discriminator(fake)
-                gan_logits = self.log_sum_exp(class_logits)
+                gan_logits = self._discriminator_output(class_logits)
 
                 G_loss = unsupervised_loss(gan_logits.view(-1), label_real_adv)
                 G_loss.backward()
