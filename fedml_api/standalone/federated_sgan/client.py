@@ -72,3 +72,20 @@ class FedSSGANClient(BaseClient):
 
         logging.info(f'Client: {self.client_idx} created synthetic dataset of size: {size}, batch size {batch_size}')
         self.local_synthetic_data = synthetic_dataset
+
+    def set_synthetic_dataset(self, unlabelled_dataset):
+        if unlabelled_dataset is None:
+            self.local_synthetic_data = None
+            return
+
+        size = len(unlabelled_dataset)
+        num_batches = len(self.local_training_data)
+        batch_size = size // num_batches if size > num_batches else size
+        self.local_synthetic_data = DataLoader(unlabelled_dataset, batch_size=batch_size)
+
+    def generate_synthetic_dataset(self):
+        target_size = self.get_dataset_size('train') * 5
+        synthetic_dataset, size = self.model_trainer.generate_synthetic_dataset(target_size,
+                                                                                device=self.device)
+        logging.info(f'Client: {self.client_idx} created synthetic dataset of size: {size}')
+        return synthetic_dataset

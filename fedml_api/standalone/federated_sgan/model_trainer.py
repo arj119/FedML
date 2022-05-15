@@ -219,7 +219,11 @@ class FedSSGANModelTrainer(ModelTrainer):
 
                 model.zero_grad()
                 output = model(x)  # in classification case will be logits
-                loss = criterion(output, labels)
+                # 3. on labeled data
+                logz_label = torch.logsumexp(output, dim=-1)
+                prob_label = torch.gather(output, 1, labels.unsqueeze(1))
+                loss = -torch.mean(prob_label) + torch.mean(logz_label)
+
                 loss.backward()
                 optimizer.step()
                 batch_loss.append(loss.item())
@@ -298,22 +302,28 @@ class FedSSGANModelTrainer(ModelTrainer):
         model = self.local_model
         model.to(device)
 
-        # train_data, kd_transfer_data = private_data
+        if args.client_optimizer == "sgd":
+            optimiser_D = torch.optim.SGD(self.local_model.parameters(), lr=args.lr)
 
-        # train and update
-        criterion = nn.CrossEntropyLoss().to(device)
+        else:
+            beta1, beta2 = 0.5, 0.999
+            optimiser_D = torch.optim.Adam(filter(lambda p: p.requires_grad, self.local_model.parameters()),
+                                           lr=args.lr,
+                                           weight_decay=args.wd,
+                                           amsgrad=True,
+                                           betas=(beta1, beta2)
+                                           )
 
-        # # Transfer learning to private dataset
-        # self._train_loop(model, train_data=private_data, criterion=criterion, epochs=args.pretrain_epochs_private,
-        #                  optimizer=self.local_optimizer, device=device)
+        # Transfer learning to private dataset
+        self._train_loop(model, train_data=private_data, criterion=None, epochs=args.pretrain_epochs_private,
+                         optimizer=optimiser_D, device=device)
 
     def _get_pseudo_labels_with_probability(self, disc_logits):
         class_probabilities = F.softmax(disc_logits, dim=-1)
         max_probs, labels = class_probabilities.max(dim=-1)
         return max_probs, labels
 
-
-    def generate_synthetic_dataset(self, target_size, num_batches, real_score_threshold=0.7, device='cpu'):
+    def generate_synthetic_dataset(self, target_size, real_score_threshold=0.7, device='cpu'):
         generator, discriminator = self.generator.to(device), self.local_model.to(device)
         generator.eval()
         discriminator.eval()
@@ -327,10 +337,8 @@ class FedSSGANModelTrainer(ModelTrainer):
         # If generator is not good enough do not create synthetic dataset
         size = good_generated_images.size(0)
         if size == 0:
-            return None, 0, 0
-
-        batch_size = size // num_batches if size > num_batches else size
+            return None, 0
 
         dataset = TensorDataset(good_generated_images)
-        data_loader = DataLoader(dataset, batch_size=batch_size)
-        return data_loader, size, batch_size
+        # data_loader = DataLoader(dataset, batch_size=batch_size)
+        return dataset, size

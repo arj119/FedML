@@ -6,6 +6,7 @@ from typing import List, Tuple
 import numpy as np
 import torch
 import wandb
+from torch.utils.data import ConcatDataset
 
 from fedml_api.standalone.fedavg.my_model_trainer import MyModelTrainer
 from fedml_api.standalone.federated_sgan.client import FedSSGANClient
@@ -57,21 +58,34 @@ class FedSSGANAPI(HeterogeneousModelBaseTrainerAPI):
             c.pre_train()
         logging.info('###############Pre-Training clients (END)###########\n')
 
+        unlabelled_synthesised_data = None
         w_global = self.global_model.get_model_params()
         for round_idx in range(self.args.comm_round):
 
             logging.info("################Communication round : {}".format(round_idx))
 
             w_locals = []
+            synthesised_data_locals = []
 
             client: FedSSGANClient
             for idx, client in enumerate(self.client_list):
+                # Update client synthetic datasets
+                client.set_synthetic_dataset(unlabelled_synthesised_data)
+
                 # Local round
                 w = client.train(copy.deepcopy(w_global), round_idx)
                 # self.logger.info("local weights = " + str(w))
                 w_locals.append((client.get_sample_number(), copy.deepcopy(w)))
 
-                client.update_synthetic_dataset()
+                synthetic_data = client.generate_synthetic_dataset()
+                if synthetic_data is not None:
+                    synthesised_data_locals.append(synthetic_data)
+
+            if len(synthesised_data_locals) > 0:
+                unlabelled_synthesised_data = ConcatDataset(synthesised_data_locals)
+                logging.info(f'\n Synthetic Unlabelled Dataset Size: {len(unlabelled_synthesised_data)}\n')
+            else:
+                unlabelled_synthesised_data = None
 
             # update global weights
             w_global = self._aggregate(w_locals)
