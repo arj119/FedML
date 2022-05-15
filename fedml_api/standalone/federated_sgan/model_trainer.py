@@ -2,6 +2,7 @@ import logging
 
 import torch
 from torch import nn
+import torch.nn.functional as F
 import torchvision.transforms as tfs
 from torchvision.utils import make_grid
 import wandb
@@ -105,7 +106,7 @@ class FedSSGANModelTrainer(ModelTrainer):
         generator.train()
         discriminator.train()
 
-        real_label, fake_label = 1, 0 # Soft labels
+        real_label, fake_label = 1, 0  # Soft labels
 
         # train_data = labelled_data if unlabelled_data is None else zip(labelled_data, unlabelled_data)
 
@@ -138,43 +139,42 @@ class FedSSGANModelTrainer(ModelTrainer):
                     unlabelled_real = real
 
                 unlabelled_real = unlabelled_real.to(device)
-                # real = transforms(real)
                 b_size = unlabelled_real.size(0)
 
                 generator.zero_grad()
                 discriminator.zero_grad()
                 """ Update Discriminator """
 
-                # Update supervised discriminator
-                class_logits = discriminator(real)
-                D_sup_loss = supervised_loss(class_logits, labels)
+                # TRAIN THE DISCRIMINATOR (THE CLASSIFIER)
+                optimizer_D.zero_grad()
 
-                # Unsupervised discriminator
-                label_real_adv = torch.full((b_size,), real_label, device=device, requires_grad=False,
-                                            dtype=torch.float)
-                label_fake_adv = torch.full((b_size,), fake_label, device=device, requires_grad=False,
-                                            dtype=torch.float)
+                # 1. on Unlabelled data
+                outputs = discriminator(unlabelled_real)
+                logz_unlabel = torch.logsumexp(outputs, dim=-1)
+                lossUL = 0.5 * (-torch.mean(logz_unlabel) + torch.mean(F.softplus(logz_unlabel)))
 
-                # update unsupervised discriminator (adv)
-                # Real examples
-                gan_logits_real = self._discriminator_output(discriminator(unlabelled_real))
-                errD_real = unsupervised_loss(gan_logits_real, label_real_adv)
-
-                # Fake examples
+                # 2. on the generated data
                 fake = generator.generate(b_size, device)
-                gan_logits_fake = self._discriminator_output(discriminator(fake.detach()))
-                errD_fake = unsupervised_loss(gan_logits_fake.view(-1), label_fake_adv)
+                outputs = discriminator(fake.detach())  # detach() because we are not training G here
+                logz_fake = torch.logsumexp(outputs, dim=-1)
+                lossD = 0.5 * torch.mean(F.softplus(logz_fake))
 
-                D_unsup_loss = 0.5 * (errD_real + errD_fake)
-                D_loss = D_sup_loss + D_unsup_loss
+                # 3. on labeled data
+                output = discriminator(real)
+                logz_label = torch.logsumexp(output, dim=-1)
+                prob_label = torch.gather(output, 1, labels.unsqueeze(1))
+                labeled_loss = -torch.mean(prob_label) + torch.mean(logz_label)
+                D_loss = labeled_loss + lossD + lossUL
                 D_loss.backward()
+
                 optimizer_D.step()
 
-                """ Update Generator """
-                class_logits = discriminator(fake)
-                gan_logits = self._discriminator_output(class_logits)
+                # TRAIN THE DISCRIMINATOR (THE CLASSIFIER)
+                optimizer_G.zero_grad()
 
-                G_loss = unsupervised_loss(gan_logits.view(-1), label_real_adv)
+                outputs = discriminator(fake)
+                logz_unlabel = torch.logsumexp(outputs, dim=-1)
+                G_loss = 0.5 * (-torch.mean(logz_unlabel) + torch.mean(F.softplus(logz_unlabel)))
                 G_loss.backward()
                 optimizer_G.step()
 
@@ -307,6 +307,12 @@ class FedSSGANModelTrainer(ModelTrainer):
         # self._train_loop(model, train_data=private_data, criterion=criterion, epochs=args.pretrain_epochs_private,
         #                  optimizer=self.local_optimizer, device=device)
 
+    def _get_pseudo_labels_with_probability(self, disc_logits):
+        class_probabilities = F.softmax(disc_logits, dim=-1)
+        max_probs, labels = class_probabilities.max(dim=-1)
+        return max_probs, labels
+
+
     def generate_synthetic_dataset(self, target_size, num_batches, real_score_threshold=0.7, device='cpu'):
         generator, discriminator = self.generator.to(device), self.local_model.to(device)
         generator.eval()
@@ -314,8 +320,8 @@ class FedSSGANModelTrainer(ModelTrainer):
         generated_images = generator.generate(target_size, device=device)
 
         # Filter by realness score to select best generated images
-        real_scores = self._discriminator_output(discriminator(generated_images))
-        mask = real_scores >= real_score_threshold
+        label_probs, labels = self._get_pseudo_labels_with_probability(discriminator(generated_images))
+        mask = label_probs >= real_score_threshold
         good_generated_images = generated_images[mask]
 
         # If generator is not good enough do not create synthetic dataset
