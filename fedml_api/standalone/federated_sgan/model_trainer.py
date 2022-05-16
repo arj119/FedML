@@ -124,22 +124,21 @@ class FedSSGANModelTrainer(ModelTrainer):
             for batch_idx, data in enumerate(
                     labelled_data if unlabelled_data is None else zip(labelled_data, cycle(unlabelled_data))):
                 if unlabelled_data is not None:
-                    (real, labels), ulreal = data
-                    ulreal = ulreal[0]  # zip packs iterables of varying length in to tuples so ulreal becomes [ulreal]
-                    real, labels, ulreal = real.to(device), labels.to(device), ulreal.to(device)
-                    real = torch.unsqueeze(real, 1) if len(
-                        real.shape) < 4 else real  # 1 channel datasets miss second dim
+                    (real, labels), (synth, synth_labels) = data
+                    # ulreal = ulreal[0]  # zip packs iterables of varying length in to tuples so ulreal becomes [ulreal]
+                    real, labels, synth, synth_labels = real.to(device), labels.to(device), synth.to(device), synth_labels.to(device)
+                    real = torch.unsqueeze(real, 1) if len(real.shape) < 4 else real  # 1 channel datasets miss second dim
                     real = transforms(real)
                     with torch.no_grad():
-                        unlabelled_real = torch.cat((real, ulreal), dim=0)
+                        real, labels = torch.cat((real, synth), dim=0), torch.cat((labels, synth_labels), dim=0)
                 else:
                     real, labels = data
                     real, labels = real.to(device), labels.to(device)
                     real = transforms(real)
-                    unlabelled_real = real
+                    # unlabelled_real = real
 
-                unlabelled_real = unlabelled_real.to(device)
-                b_size = unlabelled_real.size(0)
+                # unlabelled_real = unlabelled_real.to(device)
+                b_size = real.size(0)
 
                 generator.zero_grad()
                 discriminator.zero_grad()
@@ -149,7 +148,7 @@ class FedSSGANModelTrainer(ModelTrainer):
                 optimizer_D.zero_grad()
 
                 # 1. on Unlabelled data
-                outputs = discriminator(unlabelled_real)
+                outputs = discriminator(real)
                 logz_unlabel = torch.logsumexp(outputs, dim=-1)
                 lossUL = 0.5 * (-torch.mean(logz_unlabel) + torch.mean(F.softplus(logz_unlabel)))
 
@@ -323,7 +322,7 @@ class FedSSGANModelTrainer(ModelTrainer):
         max_probs, labels = class_probabilities.max(dim=-1)
         return max_probs, labels
 
-    def generate_synthetic_dataset(self, target_size, real_score_threshold=0.7, device='cpu'):
+    def generate_synthetic_dataset(self, target_size, real_score_threshold=0.85, device='cpu'):
         generator, discriminator = self.generator.to(device), self.local_model.to(device)
         generator.eval()
         discriminator.eval()
@@ -332,13 +331,13 @@ class FedSSGANModelTrainer(ModelTrainer):
         # Filter by realness score to select best generated images
         label_probs, labels = self._get_pseudo_labels_with_probability(discriminator(generated_images))
         mask = label_probs >= real_score_threshold
-        good_generated_images = generated_images[mask]
+        good_generated_images, labels = generated_images[mask], labels[mask]
 
         # If generator is not good enough do not create synthetic dataset
         size = good_generated_images.size(0)
         if size == 0:
             return None, 0
 
-        dataset = TensorDataset(good_generated_images)
+        dataset = TensorDataset(good_generated_images, labels)
         # data_loader = DataLoader(dataset, batch_size=batch_size)
         return dataset, size

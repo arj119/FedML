@@ -86,6 +86,6 @@ class FedSSGANClient(BaseClient):
     def generate_synthetic_dataset(self):
         target_size = self.get_dataset_size('train') * 5
         synthetic_dataset, size = self.model_trainer.generate_synthetic_dataset(target_size,
-                                                                                device=self.device)
+                                                                                device='cpu')
         logging.info(f'Client: {self.client_idx} created synthetic dataset of size: {size}')
         return synthetic_dataset
