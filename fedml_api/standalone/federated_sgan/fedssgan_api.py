@@ -66,6 +66,7 @@ class FedSSGANAPI(HeterogeneousModelBaseTrainerAPI):
 
             w_locals = []
             synthesised_data_locals = []
+            client_synthesised_data_lens = {'round': round_idx}
 
             client: FedSSGANClient
             for idx, client in enumerate(self.client_list):
@@ -80,12 +81,19 @@ class FedSSGANAPI(HeterogeneousModelBaseTrainerAPI):
                 synthetic_data = client.generate_synthetic_dataset()
                 if synthetic_data is not None:
                     synthesised_data_locals.append(synthetic_data)
+                    client_synthesised_data_lens[f'Client_{idx}: Synthetic Dataset Size'] = len(synthetic_data)
+                else:
+                    client_synthesised_data_lens[f'Client_{idx}: Synthetic Dataset Size'] = 0
 
             if len(synthesised_data_locals) > 0:
                 unlabelled_synthesised_data = ConcatDataset(synthesised_data_locals)
                 logging.info(f'\n Synthetic Unlabelled Dataset Size: {len(unlabelled_synthesised_data)}\n')
+                client_synthesised_data_lens['Total Synthetic Dataset Size'] = len(unlabelled_synthesised_data)
             else:
                 unlabelled_synthesised_data = None
+                client_synthesised_data_lens['Total Synthetic Dataset Size'] = 0
+
+            wandb.log(client_synthesised_data_lens)
 
             # update global weights
             w_global = self._aggregate(w_locals)

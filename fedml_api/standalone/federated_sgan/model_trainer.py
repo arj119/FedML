@@ -47,12 +47,12 @@ class FedSSGANModelTrainer(ModelTrainer):
             x = x.view(x.size(0), channels, w, h)
         return x
 
-    def log_gan_images(self, caption, client_id):
+    def log_gan_images(self, caption, client_id, round_idx):
         images = make_grid(self.denorm(self.generator(self.fixed_noise)), nrow=8, padding=2, normalize=False,
                            range=None,
                            scale_each=False, pad_value=0)
         images = wandb.Image(images, caption=caption)
-        wandb.log({f"Generator Outputs {client_id}": images})
+        wandb.log({f"Generator Outputs {client_id}": images, 'round': round_idx})
 
     def get_model_params(self):
         return self.generator.cpu().state_dict()

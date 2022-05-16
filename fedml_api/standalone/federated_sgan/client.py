@@ -48,7 +48,7 @@ class FedSSGANClient(BaseClient):
         weights = self.model_trainer.get_model_params()
         self.model_trainer.log_gan_images(
             caption=f'Client {self.client_idx}, communication round: {communication_round}',
-            client_id=self.client_idx)
+            client_id=self.client_idx, round_idx=communication_round)
         logging.info(f'### Training Client {self.client_idx} (complete) ###')
         return weights
 
@@ -86,6 +86,6 @@ class FedSSGANClient(BaseClient):
     def generate_synthetic_dataset(self):
         target_size = self.get_dataset_size('train') * 5
         synthetic_dataset, size = self.model_trainer.generate_synthetic_dataset(target_size,
-                                                                                device='cpu')
+                                                                                device=self.device)
         logging.info(f'Client: {self.client_idx} created synthetic dataset of size: {size}')
         return synthetic_dataset
