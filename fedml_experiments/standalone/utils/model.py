@@ -2,7 +2,7 @@ import logging
 
 from fedml_api.model.cv.cnn import CNN_DropOut
 from fedml_api.model.cv.cnn_custom import CNNSmall, CNNMedium, CNNLarge
-from fedml_api.model.cv.generator import ImageGenerator
+from fedml_api.model.cv.generator import ImageGenerator, ConditionalImageGenerator
 from fedml_api.model.cv.mobilenet import mobilenet
 from fedml_api.model.cv.resnet import resnet56
 from fedml_api.model.cv.resnet_gn import resnet18
@@ -48,6 +48,8 @@ def create_model(args, model_name, output_dim):
         model = mobilenet(class_num=output_dim)
     elif model_name == 'generator':
         model = ImageGenerator(args.nz, args.ngf, nc=cv_datasets[args.dataset], img_size=32)
+    elif model_name == 'conditional_generator':
+        model = ConditionalImageGenerator(num_classes=output_dim, nz=args.nz, ngf=args.ngf, nc=cv_datasets[args.dataset], img_size=32)
     elif args.dataset in cv_datasets:
         model = cv_model_builders[model_name](cv_datasets[args.dataset], output_dim, cv_datasets_image_size[args.dataset])
     return model
