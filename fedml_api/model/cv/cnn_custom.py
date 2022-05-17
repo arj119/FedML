@@ -4,6 +4,7 @@ import torch.nn as nn
 import functools
 import operator
 
+
 class CNNParameterised(torch.nn.Module):
     """
     Args:
@@ -29,8 +30,16 @@ class CNNParameterised(torch.nn.Module):
             nn.Flatten(),
             nn.Linear(num_features_before_fcnn, 128),
             nn.Linear(128, out_classes),
+            nn.Softmax()
         )
-        self.net.add_module(name='classifier', module=self.classifier)
+
+        self.discriminator = nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(num_features_before_fcnn, 128),
+            nn.Linear(128, 1),
+            nn.Sigmoid()
+        )
+        # self.net.add_module(name='classifier', module=self.classifier)
 
     def _block(self, in_channels, out_channels, kernel_size, stride, padding, dropout=0.25):
         return nn.Sequential(
@@ -43,19 +52,25 @@ class CNNParameterised(torch.nn.Module):
             # nn.Dropout(dropout)
         )
 
-    def forward(self, x):
+    def forward(self, x, discriminator=False):
         if len(x.shape) < 4:
             x = torch.unsqueeze(x, 1)
         x = self.net(x)
-        return x
+
+        if discriminator:
+            return self.classifier(x), self.discriminator(x)
+        else:
+            return self.classifier(x)
 
 
 def CNNSmall(in_channels, output_dim, input_dim):
-    return CNNParameterised(in_channels=in_channels, out_classes=output_dim, layers_shape=[8, 8], dropout=0.2, input_dim=input_dim)
+    return CNNParameterised(in_channels=in_channels, out_classes=output_dim, layers_shape=[8, 8], dropout=0.2,
+                            input_dim=input_dim)
 
 
 def CNNMedium(in_channels, output_dim, input_dim):
-    return CNNParameterised(in_channels=in_channels, out_classes=output_dim, layers_shape=[8, 16, 16], dropout=0.3, input_dim=input_dim)
+    return CNNParameterised(in_channels=in_channels, out_classes=output_dim, layers_shape=[8, 16, 16], dropout=0.3,
+                            input_dim=input_dim)
 
 
 def CNNLarge(in_channels, output_dim, input_dim):

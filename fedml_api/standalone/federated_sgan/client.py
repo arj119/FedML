@@ -9,8 +9,7 @@ from fedml_api.standalone.utils.BaseClient import BaseClient
 class FedSSGANClient(BaseClient):
 
     def __init__(self, client_idx, local_training_data, local_test_data, local_sample_number, global_test_data, args,
-                 device,
-                 model_trainer: FedSSGANModelTrainer):
+                 device, model_trainer):
         super().__init__(client_idx, local_training_data, local_test_data, local_sample_number, global_test_data, args,
                          device,
                          model_trainer)

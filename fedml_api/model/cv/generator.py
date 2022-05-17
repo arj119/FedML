@@ -123,8 +123,22 @@ class ConditionalImageGenerator(Generator):
     def generate_noise_vector(self, b_size, device):
         return torch.randn(b_size, self.nz, device=device)
 
-    def generate_labels(self, b_size, device):
+    def generate_random_labels(self, b_size, device):
         return torch.randint(0, self.num_classes, (b_size,), device=device)
 
+    def generate_balanced_labels(self, b_size, device):
+        number_of_each_class = b_size // self.num_classes
+        leftover = b_size % self.num_classes
+
+        labels = []
+        for c in range(self.num_classes):
+            num = number_of_each_class
+            if leftover > 0:
+                num += 1
+                leftover -= 1
+            labels.append(torch.full((num,), c, device=device))
+
+        return torch.cat(labels, dim=0)
+
     def generate(self, b_size, device):
-        return self.forward(self.generate_noise_vector(b_size, device), self.generate_labels(b_size, device))
+        return self.forward(self.generate_noise_vector(b_size, device), self.generate_random_labels(b_size, device))

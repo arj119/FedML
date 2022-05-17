@@ -9,6 +9,7 @@ import wandb
 from torch.utils.data import ConcatDataset
 
 from fedml_api.standalone.fedavg.my_model_trainer import MyModelTrainer
+from fedml_api.standalone.federated_sgan.ac_gan_model_trainer import ACGANModelTrainer
 from fedml_api.standalone.federated_sgan.client import FedSSGANClient
 from fedml_api.standalone.federated_sgan.model_trainer import FedSSGANModelTrainer
 from fedml_api.standalone.utils.HeterogeneousModelBaseTrainerAPI import HeterogeneousModelBaseTrainerAPI
@@ -39,7 +40,7 @@ class FedSSGANAPI(HeterogeneousModelBaseTrainerAPI):
         c_idx = 0
         for local_model, freq in client_models:
             for i in range(freq):
-                model_trainer = FedSSGANModelTrainer(
+                model_trainer = ACGANModelTrainer(
                     copy.deepcopy(self.global_model.model),
                     copy.deepcopy(local_model)
                 )
@@ -71,29 +72,29 @@ class FedSSGANAPI(HeterogeneousModelBaseTrainerAPI):
             client: FedSSGANClient
             for idx, client in enumerate(self.client_list):
                 # Update client synthetic datasets
-                client.set_synthetic_dataset(unlabelled_synthesised_data)
+                # client.set_synthetic_dataset(unlabelled_synthesised_data)
 
                 # Local round
                 w = client.train(copy.deepcopy(w_global), round_idx)
                 # self.logger.info("local weights = " + str(w))
                 w_locals.append((client.get_sample_number(), copy.deepcopy(w)))
 
-                synthetic_data = client.generate_synthetic_dataset()
-                if synthetic_data is not None:
-                    synthesised_data_locals.append(synthetic_data)
-                    client_synthesised_data_lens[f'Client_{idx}: Synthetic Dataset Size'] = len(synthetic_data)
-                else:
-                    client_synthesised_data_lens[f'Client_{idx}: Synthetic Dataset Size'] = 0
+            #     synthetic_data = client.generate_synthetic_dataset()
+            #     if synthetic_data is not None:
+            #         synthesised_data_locals.append(synthetic_data)
+            #         client_synthesised_data_lens[f'Client_{idx}: Synthetic Dataset Size'] = len(synthetic_data)
+            #     else:
+            #         client_synthesised_data_lens[f'Client_{idx}: Synthetic Dataset Size'] = 0
+            #
+            # if len(synthesised_data_locals) > 0:
+            #     unlabelled_synthesised_data = ConcatDataset(synthesised_data_locals)
+            #     logging.info(f'\n Synthetic Unlabelled Dataset Size: {len(unlabelled_synthesised_data)}\n')
+            #     client_synthesised_data_lens['Total Synthetic Dataset Size'] = len(unlabelled_synthesised_data)
+            # else:
+            #     unlabelled_synthesised_data = None
+            #     client_synthesised_data_lens['Total Synthetic Dataset Size'] = 0
 
-            if len(synthesised_data_locals) > 0:
-                unlabelled_synthesised_data = ConcatDataset(synthesised_data_locals)
-                logging.info(f'\n Synthetic Unlabelled Dataset Size: {len(unlabelled_synthesised_data)}\n')
-                client_synthesised_data_lens['Total Synthetic Dataset Size'] = len(unlabelled_synthesised_data)
-            else:
-                unlabelled_synthesised_data = None
-                client_synthesised_data_lens['Total Synthetic Dataset Size'] = 0
-
-            wandb.log(client_synthesised_data_lens)
+            # wandb.log(client_synthesised_data_lens)
 
             # update global weights
             w_global = self._aggregate(w_locals)

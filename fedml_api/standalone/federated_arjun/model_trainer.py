@@ -13,7 +13,7 @@ except ImportError:
 
 
 class FedArjunModelTrainer(ModelTrainer):
-    def __init__(self, adapter_model, local_model, args, train_adapter_model_only=True):
+    def __init__(self, adapter_model, local_model, args, train_adapter_model_only=False):
         """
         Args:
             adapter_model: Homogeneous model between clients that acts as knowledge transfer vehicle.
@@ -87,7 +87,7 @@ class FedArjunModelTrainer(ModelTrainer):
 
             # 1. Transfer knowledge from adapter model to local model
             self._knowledge_distillation(adapter_model, local_model, train_data, args.kd_epochs, local_optimizer_kd,
-                                         cls_criterion, kd_criterion, 1, device)
+                                         cls_criterion, kd_criterion, 0.5, device)
 
             logging.info(f'Train local model')
 
@@ -97,7 +97,7 @@ class FedArjunModelTrainer(ModelTrainer):
             logging.info(f'Transfer knowledge from local model to adapter model')
             # 3. Transfer knowledge from local model to adapter model
             self._knowledge_distillation(local_model, adapter_model, train_data, args.kd_epochs, adapter_optimizer,
-                                         cls_criterion, kd_criterion, 1, device)
+                                         cls_criterion, kd_criterion, 0.5, device)
 
     def _knowledge_distillation(self, teacher_model, student_model, transfer_set, epochs, optimizer, criterion,
                                 kd_criterion, kd_lambda, device):
