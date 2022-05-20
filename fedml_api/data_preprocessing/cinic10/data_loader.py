@@ -185,8 +185,8 @@ def get_dataloader_cinic10(datadir, train_bs, test_bs, dataidxs=None):
     train_ds = dl_obj(traindir, dataidxs=dataidxs, transform=transform_train)
     test_ds = dl_obj(valdir, transform=transform_train)
 
-    train_dl = data.DataLoader(dataset=train_ds, batch_size=train_bs, shuffle=True, drop_last=True)
-    test_dl = data.DataLoader(dataset=test_ds, batch_size=test_bs, shuffle=False, drop_last=True)
+    train_dl = data.DataLoader(dataset=train_ds, batch_size=train_bs, shuffle=True)
+    test_dl = data.DataLoader(dataset=test_ds, batch_size=test_bs, shuffle=False)
 
     return train_dl, test_dl
 
@@ -202,8 +202,8 @@ def get_dataloader_test_cinic10(datadir, train_bs, test_bs, dataidxs_train=None,
     train_ds = dl_obj(traindir, dataidxs=dataidxs_train, transform=transform_train)
     test_ds = dl_obj(valdir, dataidxs=dataidxs_test, transform=transform_test)
 
-    train_dl = data.DataLoader(dataset=train_ds, batch_size=train_bs, shuffle=True, drop_last=True)
-    test_dl = data.DataLoader(dataset=test_ds, batch_size=test_bs, shuffle=False, drop_last=True)
+    train_dl = data.DataLoader(dataset=train_ds, batch_size=train_bs, shuffle=True)
+    test_dl = data.DataLoader(dataset=test_ds, batch_size=test_bs, shuffle=False)
 
     return train_dl, test_dl
 

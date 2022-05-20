@@ -67,8 +67,7 @@ def get_partition_indices_test(X_test, y_test, num_classes, num_users, traindata
     idx = {l: 0 for l in range(num_classes)}  # tracks start of indices for each label used in sampling
     testdata_cls_counts = defaultdict(dict)
     for user in range(num_users):
-        user_sampled_labels = range(num_classes) if traindata_cls_counts is None else list(
-            traindata_cls_counts[user].keys())
+        user_sampled_labels = range(num_classes) #if traindata_cls_counts is None else list(traindata_cls_counts[user].keys())
         for label in user_sampled_labels:
             num_samples = int(len(label_indices[label]) / num_users)
             assert num_samples + idx[label] <= len(label_indices[label])
