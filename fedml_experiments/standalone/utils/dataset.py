@@ -4,6 +4,7 @@ import os
 import numpy as np
 import torch
 
+from fedml_api.data_preprocessing.MNIST.data_loader_better import load_partition_data_mnist_better
 from fedml_api.data_preprocessing.cifar10.data_loader import load_partition_data_cifar10
 from fedml_api.data_preprocessing.cifar100.data_loader import load_partition_data_cifar100
 from fedml_api.data_preprocessing.cinic10.data_loader import load_partition_data_cinic10
@@ -39,18 +40,18 @@ def load_data(args, dataset_name):
     else:
         full_batch = False
 
-    if dataset_name == "mnist":
-        logging.info("load_data. dataset_name = %s" % dataset_name)
-        client_num, train_data_num, test_data_num, train_data_global, test_data_global, \
-        train_data_local_num_dict, train_data_local_dict, test_data_local_dict, \
-        class_num = load_partition_data_mnist(args.batch_size)
-        """
-        For shallow NN or linear models, 
-        we uniformly sample a fraction of clients each round (as the original FedAvg paper)
-        """
-        args.client_num_in_total = client_num
+    # if dataset_name == "mnist":
+    #     logging.info("load_data. dataset_name = %s" % dataset_name)
+    #     client_num, train_data_num, test_data_num, train_data_global, test_data_global, \
+    #     train_data_local_num_dict, train_data_local_dict, test_data_local_dict, \
+    #     class_num = load_partition_data_mnist(args.batch_size)
+    #     """
+    #     For shallow NN or linear models,
+    #     we uniformly sample a fraction of clients each round (as the original FedAvg paper)
+    #     """
+    #     args.client_num_in_total = client_num
 
-    elif dataset_name == "femnist":
+    if dataset_name == "femnist":
         logging.info("load_data. dataset_name = %s" % dataset_name)
         client_num, train_data_num, test_data_num, train_data_global, test_data_global, \
         train_data_local_num_dict, train_data_local_dict, test_data_local_dict, \
@@ -133,6 +134,8 @@ def load_data(args, dataset_name):
             data_loader = load_partition_data_cifar100
         elif dataset_name == "cinic10":
             data_loader = load_partition_data_cinic10
+        elif dataset_name == "mnist":
+            data_loader = load_partition_data_mnist_better
         else:
             data_loader = load_partition_data_cifar10
         train_data_num, test_data_num, train_data_global, test_data_global, \
