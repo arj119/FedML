@@ -1,6 +1,7 @@
 import copy
 import logging
 import random
+from collections import Counter
 from typing import List, Tuple
 
 import numpy as np
@@ -11,6 +12,7 @@ from fedml_api.standalone.fedmd.client import Client
 from fedml_api.standalone.fedmd.model_trainer import FedMLModelTrainer
 from fedml_api.standalone.fedmd.utils.data_utils import PublicDataset
 from fedml_api.standalone.utils.HeterogeneousModelBaseTrainerAPI import HeterogeneousModelBaseTrainerAPI
+from fedml_api.standalone.utils.plot import plot_label_distributions
 
 
 class FedMDAPI(HeterogeneousModelBaseTrainerAPI):
@@ -23,6 +25,8 @@ class FedMDAPI(HeterogeneousModelBaseTrainerAPI):
             client_models: List of client models and their frequency participating (assuming a stateful algorithm for simplicity)
         """
         super().__init__(dataset, device, args)
+        self.start_local_client_idx = self._setup_clients(self.train_data_local_num_dict, self.train_data_local_dict,
+                                                          self.test_data_local_dict, client_models)
 
         # Select a sufficient number of data samples to be in public dataset
         if not args.public_dataset_size:
@@ -30,10 +34,9 @@ class FedMDAPI(HeterogeneousModelBaseTrainerAPI):
 
         public_datasets = []
         public_dataset_size = 0
-        self.start_local_client_idx = 0
 
         logging.info('############ Creating public dataset ############')
-        for data_loader in self.train_data_local_dict.values():
+        for data_loader in list(self.train_data_local_dict.values())[self.start_local_client_idx:]:
             public_dataset_size += len(data_loader.dataset)
             public_datasets.append(data_loader)
             if public_dataset_size >= args.public_dataset_size:
@@ -42,9 +45,6 @@ class FedMDAPI(HeterogeneousModelBaseTrainerAPI):
         self.public_data = PublicDataset(public_datasets)
         logging.info(f'Public dataset size = {public_dataset_size}')
         logging.info('############ Creating public dataset(END) ############')
-
-        self._setup_clients(self.train_data_local_num_dict, self.train_data_local_dict, self.test_data_local_dict,
-                            client_models)
 
         self._plot_client_training_data_distribution()
 
@@ -56,12 +56,15 @@ class FedMDAPI(HeterogeneousModelBaseTrainerAPI):
         for model, freq in client_models:
             for i in range(freq):
                 model_trainer = FedMLModelTrainer(copy.deepcopy(model))
-                c = Client(c_idx, train_data_local_dict[self.start_local_client_idx + c_idx], test_data_local_dict[self.start_local_client_idx + c_idx],
-                           train_data_local_num_dict[self.start_local_client_idx + c_idx], self.test_global, self.args, self.device, model_trainer)
+                c = Client(c_idx, train_data_local_dict[c_idx],
+                           test_data_local_dict[c_idx],
+                           train_data_local_num_dict[c_idx], self.test_global, self.args,
+                           self.device, model_trainer)
                 self.client_list.append(c)
                 c_idx += 1
 
         logging.info("############setup_clients (END)#############")
+        return c_idx
 
     def train(self):
         # Transfer learning
@@ -70,7 +73,6 @@ class FedMDAPI(HeterogeneousModelBaseTrainerAPI):
             logging.info(f'Pre=training client: {i}')
             c.pre_train(self.public_data)
         logging.info('###############Pre-Training clients (END)###########\n')
-
 
         for round_idx in range(self.args.comm_round):
 
@@ -109,3 +111,18 @@ class FedMDAPI(HeterogeneousModelBaseTrainerAPI):
                 else:
                     self._local_test_on_all_clients(round_idx)
 
+    def _plot_client_training_data_distribution(self):
+        columns = ['Client Idx', 'Sample Number', 'Training Dataset Size', 'Test Dataset Size']
+        table_data = [[c.client_idx, c.local_sample_number, c.get_dataset_size('train'), c.get_dataset_size('test')] for
+                      c in
+                      self.client_list]
+        wandb.log({'Client Dataset Size Distribution': wandb.Table(columns=columns, data=table_data)})
+
+        client_label_counts = [c.get_training_label_distribution() for c in self.client_list]
+        client_training_label_count = {client_idx: label_count for client_idx, label_count in client_label_counts}
+
+        # Add public dataset
+        train_classes = list(torch.concat([label for _, label in self.public_data], dim=0).numpy())
+        client_training_label_count[-1] = dict(Counter(train_classes))
+
+        plot_label_distributions(client_training_label_count, alpha=self.args.partition_alpha)

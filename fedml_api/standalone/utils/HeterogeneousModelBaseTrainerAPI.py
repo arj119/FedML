@@ -22,6 +22,7 @@ class HeterogeneousModelBaseTrainerAPI(ABC):
         self.args = args
         [train_data_num, test_data_num, train_data_global, test_data_global,
          train_data_local_num_dict, train_data_local_dict, test_data_local_dict, class_num] = dataset
+        self.class_num = class_num
         self.train_global = train_data_global
         self.test_global = test_data_global
         self.val_global = None
@@ -189,11 +190,19 @@ class HeterogeneousModelBaseTrainerAPI(ABC):
 
     def _plot_client_training_data_distribution(self):
         columns = ['Client Idx', 'Sample Number', 'Training Dataset Size', 'Test Dataset Size']
-        table_data = [[c.client_idx, c.local_sample_number, c.get_dataset_size('train'), c.get_dataset_size('test')] for c in
+        table_data = [[c.client_idx, c.local_sample_number, c.get_dataset_size('train'), c.get_dataset_size('test')] for
+                      c in
                       self.client_list]
         wandb.log({'Client Dataset Size Distribution': wandb.Table(columns=columns, data=table_data)})
 
-
-        client_label_counts = [c.get_training_label_distribution() for c in self.client_list]
+        # Train
+        client_label_counts = [c.get_label_distribution(mode='train') for c in self.client_list]
         client_training_label_count = {client_idx: label_count for client_idx, label_count in client_label_counts}
-        plot_label_distributions(client_training_label_count, alpha=self.args.partition_alpha)
+        plot_label_distributions(client_training_label_count, self.class_num, alpha=self.args.partition_alpha,
+                                 dataset='Train')
+
+        # Test
+        client_label_counts = [c.get_label_distribution(mode='test') for c in self.client_list]
+        client_test_label_count = {client_idx: label_count for client_idx, label_count in client_label_counts}
+        plot_label_distributions(client_test_label_count, self.class_num, alpha=self.args.partition_alpha,
+                                 dataset='Test')

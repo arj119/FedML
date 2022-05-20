@@ -3,9 +3,11 @@ from torch.utils.data import DataLoader
 from collections import Counter
 import torch
 
+
 class BaseClient:
 
-    def __init__(self, client_idx, local_training_data, local_test_data, local_sample_number, global_test_data, args, device,
+    def __init__(self, client_idx, local_training_data, local_test_data, local_sample_number, global_test_data, args,
+                 device,
                  model_trainer):
         self.client_idx = client_idx
         self.local_training_data: DataLoader = local_training_data
@@ -19,7 +21,8 @@ class BaseClient:
         self.device = device
         self.model_trainer = model_trainer
 
-    def update_local_dataset(self, client_idx, local_training_data, local_test_data, global_val_data, local_sample_number):
+    def update_local_dataset(self, client_idx, local_training_data, local_test_data, global_val_data,
+                             local_sample_number):
         self.client_idx = client_idx
         self.local_training_data = local_training_data
         self.local_test_data = local_test_data
@@ -49,9 +52,12 @@ class BaseClient:
         metrics = self.model_trainer.test(test_data, self.device, self.args)
         return metrics
 
-    def get_training_label_distribution(self):
-        local_training_data = self._get_training_data_from_tuple()
-        train_classes = list(torch.concat([label for _, label in local_training_data], dim=0).numpy())
+    def get_label_distribution(self, mode='train'):
+        if mode == 'train':
+            data = self._get_training_data_from_tuple()
+        else:
+            data = self.local_test_data
+        train_classes = list(torch.concat([label for _, label in data], dim=0).numpy())
         return self.client_idx, dict(Counter(train_classes))
 
     def _get_training_data_from_tuple(self):

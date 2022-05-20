@@ -2,6 +2,8 @@ import logging
 import sys
 import os
 
+import wandb
+
 sys.path.insert(0, os.path.abspath(os.path.join(os.getcwd(), "../../../")))
 
 from fedml_experiments.standalone.utils.config import parse_config
@@ -49,11 +51,12 @@ if __name__ == "__main__":
     adapter_model = create_model(args, model_name=client_model_config['adapter_model'], output_dim=dataset[7])
     client_models = []
     client_num = 0
+
     for entry in client_model_config['client_models']:
         model = create_model(args, model_name=entry['model'], output_dim=dataset[7])
         client_models.append((model, entry['freq']))
         client_num += entry['freq']
-
+ 
     args.client_num_in_total = client_num
 
     # model = create_model(args, model_name=args.model, output_dim=dataset[7])

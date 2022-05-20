@@ -4,6 +4,7 @@ from collections import defaultdict
 import logging
 import wandb
 
+
 def convert_to_list(data: dict):
     """
     Args:
@@ -25,19 +26,43 @@ def convert_to_list(data: dict):
     return out, clients
 
 
-def plot_label_distributions(data, alpha=0.5):
-    label_count, clients = convert_to_list(data)
+def log_label_distribution_table(data: dict, class_num, dataset='Train'):
+    """
+       Args:
+           data: Takes in label distribution dict which is {client_id -> {label -> count}}
 
+   """
+    all_labels = [str(l) for l in range(class_num)]
+    columns = ['client_idx']
+    columns.extend(all_labels)
+
+    rows = []
+
+    for client_idx, label_count in data.items():
+        list_label_count = [label_count.get(l, 0) for l in range(class_num)]
+        row = [client_idx]
+        row.extend(list_label_count)
+        rows.append(row)
+
+    table = wandb.Table(columns=columns, data=rows)
+    wandb.log({f'Client Dataset Label Distribution {dataset}': table})
+
+
+def plot_label_distributions(data, class_num, alpha=None, dataset='Train'):
+    plt.clf()
+    label_count, clients = convert_to_list(data)
+    log_label_distribution_table(data, class_num, dataset)
     for l, counts in label_count.items():
         plt.scatter(clients, [l] * len(clients), s=counts, label=f'$label={l}$', lw=1, c=['blue'])
 
     labels = list(label_count.keys())
     plt.yticks(np.arange(min(labels), max(labels) + 1, 1.0))
     plt.xticks(np.arange(min(clients), max(clients) + 1, 1.0))
-    plt.ylabel('Training Label')
+    plt.ylabel('Label')
     plt.xlabel('Client ID')
-    plt.title(f'Training Label Distribution $\\alpha = {alpha}$')
-    plt.savefig('label_distribution.png')
+    alpha_section = f"$\\alpha = {alpha}$"
+    plt.title(f'Label Distribution ({dataset}) {alpha_section if alpha is not None else ""}')
+    plt.savefig(f'{dataset}_label_distribution.png')
     logging.info('----------- Saved Client Training Data Distribution ------------')
-    image = wandb.Image('label_distribution.png')
-    wandb.log({'Training Label Distribution': image})
+    image = wandb.Image(f'{dataset}_label_distribution.png')
+    wandb.log({f'Label Distribution {dataset}': image})
