@@ -7,10 +7,10 @@ def create_argparser(parser):
     return a parser added with args required by fit
     """
     # Training settings
-    parser.add_argument('--dataset', type=str, default='femnist', metavar='N',
+    parser.add_argument('--dataset', type=str, default='mnist', metavar='N',
                         help='dataset used for training')
 
-    parser.add_argument('--data_dir', type=str, default='./../../../data/FederatedEMNIST',
+    parser.add_argument('--data_dir', type=str, default='./../../../data/mnist',
                         help='data directory')
 
     parser.add_argument('--partition_method', type=str, default='hetero', metavar='N',
@@ -19,7 +19,7 @@ def create_argparser(parser):
     parser.add_argument('--partition_alpha', type=float, default=0.5, metavar='PA',
                         help='partition alpha (default: 0.5)')
 
-    parser.add_argument('--batch_size', type=int, default=20, metavar='N',
+    parser.add_argument('--batch_size', type=int, default=64, metavar='N',
                         help='input batch size for training (default: 64)')
 
     parser.add_argument('--client_optimizer', type=str, default='adam',
@@ -33,14 +33,14 @@ def create_argparser(parser):
     parser.add_argument('--epochs', type=int, default=5, metavar='EP',
                         help='how many epochs will be trained locally')
 
-    parser.add_argument('--client_num_in_total', type=int, default=10, metavar='NN',
+    parser.add_argument('--client_num_in_total', type=int, default=20, metavar='NN',
                         help='number of workers in a distributed cluster')
 
     parser.add_argument('--client_num_per_round', type=int, default=10, metavar='NN',
                         help='number of workers')
 
-    parser.add_argument('--comm_round', type=int, default=20,
-                        help='how many round of communications we shoud use')
+    parser.add_argument('--comm_round', type=int, default=100,
+                        help='how many round of communications we should use')
 
     parser.add_argument('--frequency_of_the_test', type=int, default=1,
                         help='the frequency of the algorithms')

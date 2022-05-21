@@ -30,7 +30,7 @@ class CNNParameterised(torch.nn.Module):
             nn.Flatten(),
             nn.Linear(num_features_before_fcnn, 128),
             nn.Linear(128, out_classes),
-            nn.Softmax()
+            # nn.Softmax()
         )
 
         self.discriminator = nn.Sequential(
