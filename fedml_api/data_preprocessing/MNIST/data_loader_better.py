@@ -38,8 +38,8 @@ class Cutout(object):
 
 
 def _data_transforms_mnist():
-    MNIST_MEAN = (0.1307,)
-    MNIST_STD = (0.3081,)  
+    MNIST_MEAN = (0.5,)
+    MNIST_STD = (0.5,)
 
     train_transform = transforms.Compose([
         transforms.ToPILImage(),

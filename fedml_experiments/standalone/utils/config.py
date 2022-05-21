@@ -39,7 +39,7 @@ def create_argparser(parser):
     parser.add_argument('--client_num_per_round', type=int, default=10, metavar='NN',
                         help='number of workers')
 
-    parser.add_argument('--comm_round', type=int, default=100,
+    parser.add_argument('--comm_round', type=int, default=30,
                         help='how many round of communications we should use')
 
     parser.add_argument('--frequency_of_the_test', type=int, default=1,

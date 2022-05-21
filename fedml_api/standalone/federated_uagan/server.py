@@ -1,14 +1,13 @@
 import copy
 import logging
-import random
 from typing import List, Tuple
 
-import numpy as np
 import torch
 import wandb
-from torch.utils.data import ConcatDataset, DataLoader, TensorDataset
+from torch.utils.data import DataLoader, TensorDataset
 from torchvision.utils import make_grid
 import torch.nn as nn
+import torchvision.transforms as tfs
 
 from fedml_api.model.cv.generator import Generator
 from fedml_api.standalone.federated_uagan.ac_gan_model_trainer import ACGANModelTrainer
@@ -43,6 +42,9 @@ class FedUAGANAPI(HeterogeneousModelBaseTrainerAPI):
 
         self.weights = self._compute_weights()
         self.real_label, self.fake_label = 1, 0
+
+        self.mean = torch.Tensor([0.5])
+        self.std = torch.Tensor([0.5])
 
         self._plot_client_training_data_distribution()
 
@@ -81,7 +83,7 @@ class FedUAGANAPI(HeterogeneousModelBaseTrainerAPI):
         auxiliary_loss = nn.CrossEntropyLoss().to(self.device)
 
         for round_idx in range(self.args.comm_round):
-            logging.info("################Communication round : {}".format(round_idx))
+            logging.info("\n################Communication round : {}".format(round_idx))
 
             """
                 Train Client Discriminators
@@ -100,7 +102,6 @@ class FedUAGANAPI(HeterogeneousModelBaseTrainerAPI):
                     logging.info(f"Client {idx}: Disc Loss: {errD}")
                     wandb.log({f'Client {idx} Disc/Loss': errD, 'round': round_idx})
 
-            logging.info("########## Training Discriminators (Complete)#########")
             logging.info("########## Training Generator #########")
 
             # Update generator
@@ -130,11 +131,11 @@ class FedUAGANAPI(HeterogeneousModelBaseTrainerAPI):
 
             del D_syn
             logging.info(f'Generator loss: {errG.item()}')
-            logging.info("########## Training Generator (Complete)#########")
 
-            logging.info("########## Logging generator images... #########")
-            self.log_gan_images(caption=f'Generator Output, communication round: {round_idx}')
-            logging.info("########## Logging generator images... Complete #########")
+            if round_idx % 20 == 0:
+                logging.info("########## Logging generator images... #########")
+                self.log_gan_images(caption=f'Generator Output, communication round: {round_idx}')
+                logging.info("########## Logging generator images... Complete #########")
 
             # test results
             # at last round
@@ -148,13 +149,23 @@ class FedUAGANAPI(HeterogeneousModelBaseTrainerAPI):
                     self._local_test_on_all_clients(round_idx)
 
     def log_gan_images(self, caption):
-        images = make_grid(self.generator(self.fixed_noise.to(self.device), self.fixed_labels.to(self.device)), nrow=8,
-                           padding=2,
-                           normalize=False,
-                           range=None,
-                           scale_each=False, pad_value=0)
+        images = make_grid(
+            self.denorm(self.generator(self.fixed_noise.to(self.device), self.fixed_labels.to(self.device))), nrow=8,
+            padding=2,
+            normalize=False,
+            range=None,
+            scale_each=False, pad_value=0)
         images = wandb.Image(images, caption=caption)
         wandb.log({f"Generator Outputs": images})
+
+    def denorm(self, x, channels=None, w=None, h=None, resize=False, device='cpu'):
+        unnormalize = tfs.Normalize((-self.mean / self.std).tolist(), (1.0 / self.std).tolist()).to(device)
+        x = unnormalize(x)
+        if resize:
+            if channels is None or w is None or h is None:
+                print('Number of channels, width and height must be provided for resize.')
+            x = x.view(x.size(0), channels, w, h)
+        return x
 
     def generate_synthetic_dataset(self, batch_size, device):
         generator = self.generator.to(device)
