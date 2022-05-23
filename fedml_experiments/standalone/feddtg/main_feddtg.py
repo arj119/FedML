@@ -32,10 +32,10 @@ def add_args(parser):
                         default=100,
                         help='Number of generator features')
 
-    parser.add_argument('--kd_alpha', type=float, default=0.6,
+    parser.add_argument('--kd_alpha', type=float, default=0.8,
                         help='Weighting of knowledge distillation regularisation term')
 
-    parser.add_argument('--kd_epochs', type=int, default=1,
+    parser.add_argument('--kd_epochs', type=int, default=5,
                         help='Number of knowledge distillation epochs')
 
     return parser
