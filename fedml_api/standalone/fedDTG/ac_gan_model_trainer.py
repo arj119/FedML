@@ -55,7 +55,7 @@ class ACGANModelTrainer(ModelTrainer):
 
         if args.client_optimizer == "sgd":
             optimiser_G = torch.optim.SGD(self.generator.parameters(), lr=args.lr)
-            optimiser_D = torch.optim.SGD(self.local_model.parameters(), lr=args.lr)
+            optimiser_D = torch.optim.SGD(self.discriminator.parameters(), lr=args.lr)
             optimiser_C = torch.optim.SGD(self.local_model.parameters(), lr=args.lr)
 
 
@@ -67,7 +67,7 @@ class ACGANModelTrainer(ModelTrainer):
                                            amsgrad=True,
                                            betas=(beta1, beta2)
                                            )
-            optimiser_D = torch.optim.Adam(filter(lambda p: p.requires_grad, self.local_model.parameters()),
+            optimiser_D = torch.optim.Adam(filter(lambda p: p.requires_grad, self.discriminator.parameters()),
                                            lr=args.lr,
                                            weight_decay=args.wd,
                                            amsgrad=True,
