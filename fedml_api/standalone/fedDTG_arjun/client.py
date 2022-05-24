@@ -3,7 +3,7 @@ import logging
 from fedml_api.standalone.utils.BaseClient import BaseClient
 
 
-class FedDTGClient(BaseClient):
+class FedDTGArjunClient(BaseClient):
 
     def __init__(self, client_idx, local_training_data, local_test_data, local_sample_number, global_test_data, args,
                  device, model_trainer):
@@ -55,5 +55,5 @@ class FedDTGClient(BaseClient):
         # self.generate_distillation_set(noise_labels_loader)
         return self.model_trainer.get_classifier_logits(distillation_dataset, self.device)
 
-    def classifier_knowledge_distillation(self, consensus_logits, distillation_dataset):
-        self.model_trainer.knowledge_distillation(distillation_dataset, consensus_logits, self.device, self.args)
+    def classifier_knowledge_distillation(self, consensus_outputs, distillation_dataset):
+        self.model_trainer.knowledge_distillation(distillation_dataset, consensus_outputs, self.device, self.args)
