@@ -128,7 +128,7 @@ class FedDTGArjunAPI(HeterogeneousModelBaseTrainerAPI):
 
             if round_idx % 1 == 0:
                 logging.info("########## Logging generator images... #########")
-                self.log_gan_images(caption=f'Generator Output, communication round: {round_idx}')
+                self.log_gan_images(caption=f'Generator Output, communication round: {round_idx}', round_idx=round_idx)
                 logging.info("########## Logging generator images... Complete #########")
 
             # test results
@@ -153,7 +153,7 @@ class FedDTGArjunAPI(HeterogeneousModelBaseTrainerAPI):
                     averaged_params[k] += local_model_params[k] * w
         return averaged_params
 
-    def log_gan_images(self, caption):
+    def log_gan_images(self, caption, round_idx):
         images = make_grid(
             self.denorm(
                 self.generator_model(self.fixed_noise.to(self.device), self.fixed_labels.to(self.device))),
@@ -163,7 +163,7 @@ class FedDTGArjunAPI(HeterogeneousModelBaseTrainerAPI):
             range=None,
             scale_each=False, pad_value=0)
         images = wandb.Image(images, caption=caption)
-        wandb.log({f"Generator Outputs": images})
+        wandb.log({f"Generator Outputs": images, 'Round': round_idx})
 
     def denorm(self, x, channels=None, w=None, h=None, resize=False, device='cpu'):
         unnormalize = tfs.Normalize((-self.mean / self.std).tolist(), (1.0 / self.std).tolist()).to(device)

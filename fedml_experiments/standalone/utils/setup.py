@@ -26,7 +26,7 @@ def setup(algorithm_name, add_custom_args):
         name=f"{algorithm_name}", #-r" + str(args.comm_round) + "-e" + str(args.epochs) + "-lr" + str(args.lr),
         config=args
     )
-
+    wandb.define_metric("*", step_metric="Round")
     # Set the random seed. The np.random seed determines the dataset partition.
     # The torch_manual_seed determines the initial weight.
     # We fix these two, so that we can reproduce the result.

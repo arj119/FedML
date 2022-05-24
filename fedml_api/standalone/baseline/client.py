@@ -6,11 +6,10 @@ from fedml_api.standalone.federated_arjun.model_trainer import FedArjunModelTrai
 from fedml_api.standalone.utils.BaseClient import BaseClient
 
 
-class FedArjunClient(BaseClient):
+class BaselineClient(BaseClient):
 
     def __init__(self, client_idx, local_training_data, local_test_data, local_sample_number, global_test_data, args,
-                 device,
-                 model_trainer: FedArjunModelTrainer):
+                 device, model_trainer):
         super().__init__(client_idx, local_training_data, local_test_data, local_sample_number, global_test_data, args,
                          device,
                          model_trainer)

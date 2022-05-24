@@ -134,7 +134,7 @@ class FedUAGANAPI(HeterogeneousModelBaseTrainerAPI):
 
             if round_idx % 20 == 0:
                 logging.info("########## Logging generator images... #########")
-                self.log_gan_images(caption=f'Generator Output, communication round: {round_idx}')
+                self.log_gan_images(caption=f'Generator Output, communication round: {round_idx}', round_idx=round_idx)
                 logging.info("########## Logging generator images... Complete #########")
 
             # test results
@@ -148,7 +148,7 @@ class FedUAGANAPI(HeterogeneousModelBaseTrainerAPI):
                 else:
                     self._local_test_on_all_clients(round_idx)
 
-    def log_gan_images(self, caption):
+    def log_gan_images(self, caption, round_idx):
         images = make_grid(
             self.denorm(self.generator(self.fixed_noise.to(self.device), self.fixed_labels.to(self.device))), nrow=8,
             padding=2,
@@ -156,7 +156,7 @@ class FedUAGANAPI(HeterogeneousModelBaseTrainerAPI):
             range=None,
             scale_each=False, pad_value=0)
         images = wandb.Image(images, caption=caption)
-        wandb.log({f"Generator Outputs": images})
+        wandb.log({f"Generator Outputs": images, 'Round': round_idx})
 
     def denorm(self, x, channels=None, w=None, h=None, resize=False, device='cpu'):
         unnormalize = tfs.Normalize((-self.mean / self.std).tolist(), (1.0 / self.std).tolist()).to(device)

@@ -11,4 +11,8 @@ class PublicDataset:
     def __iter__(self):
         return itr_merge(self.data_loaders)
 
-
+    def __len__(self):
+        length = 0
+        for dl in self.data_loaders:
+            length += len(dl.dataset)
+        return length

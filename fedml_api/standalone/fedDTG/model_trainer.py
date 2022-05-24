@@ -52,7 +52,7 @@ class FedDTGModelTrainer(ModelTrainer):
                            range=None,
                            scale_each=False, pad_value=0)
         images = wandb.Image(images, caption=caption)
-        wandb.log({f"Generator Outputs {client_id}": images, 'round': round_idx})
+        wandb.log({f"Generator Outputs {client_id}": images, 'Round': round_idx})
 
     def get_model_params(self):
         return self.generator.cpu().state_dict()

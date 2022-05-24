@@ -9,7 +9,7 @@ except ImportError:
     from FedML.fedml_core.trainer.model_trainer import ModelTrainer
 
 
-class FedArjunModelTrainer(ModelTrainer):
+class BaselineModelTrainer(ModelTrainer):
     def __init__(self, local_model, args):
         """
         Args:
@@ -20,13 +20,9 @@ class FedArjunModelTrainer(ModelTrainer):
         self.local_model = local_model
 
         if args.client_optimizer == "sgd":
-            self.local_optimizer_kd = torch.optim.SGD(self.local_model.parameters(), lr=args.lr)
             self.local_optimizer = torch.optim.SGD(self.local_model.parameters(), lr=args.lr)
 
         else:
-            self.local_optimizer_kd = torch.optim.Adam(filter(lambda p: p.requires_grad, self.local_model.parameters()),
-                                                       lr=args.lr,
-                                                       weight_decay=args.wd, amsgrad=True)
             self.local_optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, self.local_model.parameters()),
                                                     lr=args.lr,
                                                     weight_decay=args.wd, amsgrad=True)

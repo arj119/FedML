@@ -6,6 +6,7 @@ import numpy as np
 import torch
 import wandb
 
+from fedml_api.standalone.utils.BaseClient import BaseClient
 from fedml_api.standalone.utils.plot import plot_label_distributions
 
 
@@ -92,12 +93,12 @@ class HeterogeneousModelBaseTrainerAPI(ABC):
             'losses': []
         }
 
-        global_test_metrics = {
-            'num_samples': [],
-            'num_correct': [],
-            'losses': []
-        }
+        client_test_loss_metrics = {'Round': round_idx}
+        client_test_acc_metrics = {'Round': round_idx}
+        client_train_loss_metrics = {'Round': round_idx}
+        client_train_acc_metrics = {'Round': round_idx}
 
+        client: BaseClient
         for client in self.client_list:
             """
             Note: for datasets like "fed_CIFAR100" and "fed_shakespheare",
@@ -108,18 +109,20 @@ class HeterogeneousModelBaseTrainerAPI(ABC):
             train_metrics['num_samples'].append(copy.deepcopy(train_local_metrics['test_total']))
             train_metrics['num_correct'].append(copy.deepcopy(train_local_metrics['test_correct']))
             train_metrics['losses'].append(copy.deepcopy(train_local_metrics['test_loss']))
+            client_train_acc_metrics[f'Client {client.client_idx}/Train/Acc'] = train_local_metrics['test_correct'] / \
+                                                                                train_local_metrics['test_total']
+            client_train_loss_metrics[f'Client {client.client_idx}/Train/Loss'] = train_local_metrics['test_loss'] / \
+                                                                                  train_local_metrics['test_total']
 
             # test data
             test_local_metrics = client.local_test('test')
             test_metrics['num_samples'].append(copy.deepcopy(test_local_metrics['test_total']))
             test_metrics['num_correct'].append(copy.deepcopy(test_local_metrics['test_correct']))
             test_metrics['losses'].append(copy.deepcopy(test_local_metrics['test_loss']))
-
-            # global test data
-            # global_metrics = client.local_test('val')
-            # global_test_metrics['num_samples'].append(copy.deepcopy(global_metrics['test_total']))
-            # global_test_metrics['num_correct'].append(copy.deepcopy(global_metrics['test_correct']))
-            # global_test_metrics['losses'].append(copy.deepcopy(global_metrics['test_loss']))
+            client_test_acc_metrics[f'Client {client.client_idx}/Test/Acc'] = test_local_metrics['test_correct'] / \
+                                                                              test_local_metrics['test_total']
+            client_test_loss_metrics[f'Client {client.client_idx}/Test/Loss'] = test_local_metrics['test_loss'] / \
+                                                                                test_local_metrics['test_total']
 
             """
             Note: CI environment is CPU-based computing. 
@@ -127,11 +130,9 @@ class HeterogeneousModelBaseTrainerAPI(ABC):
             """
             if self.args.ci == 1:
                 break
-
         # test on training dataset
         train_acc = sum(train_metrics['num_correct']) / sum(train_metrics['num_samples'])
         train_loss = sum(train_metrics['losses']) / sum(train_metrics['num_samples'])
-
         # test on test dataset
         test_acc = sum(test_metrics['num_correct']) / sum(test_metrics['num_samples'])
         test_loss = sum(test_metrics['losses']) / sum(test_metrics['num_samples'])
@@ -141,14 +142,19 @@ class HeterogeneousModelBaseTrainerAPI(ABC):
         # global_test_loss = sum(global_test_metrics['losses']) / sum(global_test_metrics['num_samples'])
 
         stats = {'training_acc': train_acc, 'training_loss': train_loss}
-        wandb.log({"Train/Acc": train_acc, "Round": round_idx})
-        wandb.log({"Train/Loss": train_loss, "Round": round_idx})
+        wandb.log({"Train/Acc": train_acc, "Round": round_idx}, commit=False)
+        wandb.log({"Train/Loss": train_loss, "Round": round_idx}, commit=False)
         logging.info(stats)
 
         stats = {'test_acc': test_acc, 'test_loss': test_loss}
-        wandb.log({"Test/Acc": test_acc, "Round": round_idx})
-        wandb.log({"Test/Loss": test_loss, "Round": round_idx})
+        wandb.log({"Test/Acc": test_acc, "Round": round_idx}, commit=False)
+        wandb.log({"Test/Loss": test_loss, "Round": round_idx}, commit=False)
         logging.info(stats)
+
+        wandb.log(client_test_loss_metrics, commit=False)
+        wandb.log(client_test_acc_metrics, commit=False)
+        wandb.log(client_train_loss_metrics, commit=False)
+        wandb.log(client_train_acc_metrics, commit=True)
 
         # stats = {'global_test_acc': global_test_acc, 'global_test_loss': global_test_loss}
         # wandb.log({"Global Test/Acc": global_test_acc, "Round": round_idx})
@@ -156,7 +162,6 @@ class HeterogeneousModelBaseTrainerAPI(ABC):
         # logging.info(stats)
 
     def _local_test_on_validation_set(self, round_idx):
-
         logging.info("################local_test_on_validation_set : {}".format(round_idx))
 
         if self.val_global is None:

@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 from collections import defaultdict
 import logging
 import wandb
+import plotly
 
 
 def convert_to_list(data: dict):
@@ -56,13 +57,13 @@ def plot_label_distributions(data, class_num, alpha=None, dataset='Train'):
         plt.scatter(clients, [l] * len(clients), s=counts, label=f'$label={l}$', lw=1, c=['blue'])
 
     labels = list(label_count.keys())
-    plt.yticks(np.arange(min(labels), max(labels) + 1, 1.0))
-    plt.xticks(np.arange(min(clients), max(clients) + 1, 1.0))
+    # plt.yticks(np.arange(min(labels, default=0), max(labels, default=class_num) + 1, 1.0))
+    # plt.xticks(np.arange(min(clients, default=0), max(clients, default=len(clients)) + 1, 1.0))
     plt.ylabel('Label')
     plt.xlabel('Client ID')
     alpha_section = f"$\\alpha = {alpha}$"
     plt.title(f'Label Distribution ({dataset}) {alpha_section if alpha is not None else ""}')
-    plt.savefig(f'{dataset}_label_distribution.png')
+    plt.savefig(f'{dataset}_label_distribution.png', bbox_inches='tight', dpi=100)
     logging.info('----------- Saved Client Training Data Distribution ------------')
     image = wandb.Image(f'{dataset}_label_distribution.png')
     wandb.log({f'Label Distribution {dataset}': image})

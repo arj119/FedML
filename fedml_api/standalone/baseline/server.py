@@ -4,8 +4,8 @@ from typing import List, Tuple
 
 import torch
 
-from fedml_api.standalone.baseline.client import FedArjunClient
-from fedml_api.standalone.baseline.model_trainer import FedArjunModelTrainer
+from fedml_api.standalone.baseline.client import BaselineClient
+from fedml_api.standalone.baseline.model_trainer import BaselineModelTrainer
 from fedml_api.standalone.utils.HeterogeneousModelBaseTrainerAPI import HeterogeneousModelBaseTrainerAPI
 
 
@@ -32,10 +32,10 @@ class BaselineAPI(HeterogeneousModelBaseTrainerAPI):
         c_idx = 0
         for local_model, freq in client_models:
             for i in range(freq):
-                model_trainer = FedArjunModelTrainer(
+                model_trainer = BaselineModelTrainer(
                     copy.deepcopy(local_model),
                     self.args)
-                c = FedArjunClient(c_idx, train_data_local_dict[c_idx], test_data_local_dict[c_idx],
+                c = BaselineClient(c_idx, train_data_local_dict[c_idx], test_data_local_dict[c_idx],
                                    train_data_local_num_dict[c_idx], self.test_global, self.args, self.device,
                                    model_trainer)
                 c_idx += 1
