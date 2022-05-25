@@ -43,11 +43,11 @@ python3 ./main_fedmd.py \
 --dataset $DATASET \
 --data_dir $DATA_PATH \
 --partition_method $DISTRIBUTION  \
---client_num_in_total $CLIENT_NUM \
---client_num_per_round $WORKER_NUM \
 --client_optimizer $OPT \
 --lr $LR \
---ci $CI \
+#--ci $CI \
+#--client_num_in_total $CLIENT_NUM \
+#--client_num_per_round $WORKER_NUM \
 #--comm_round $ROUND \
 #--batch_size $BATCH_SIZE \
 #--epochs $EPOCH \

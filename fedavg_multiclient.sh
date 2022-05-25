@@ -35,8 +35,8 @@ round() {
 
 # 1. MNIST standalone FedAvg
 cd ./fedml_experiments/standalone/fedavg_multiclient
-#sh run_fedavg_multiclient_standalone_pytorch.sh 0 2 2 4 mnist ./../../../data/mnist hetero 2 3 0.03 sgd 1
-sh run_fedavg_multiclient_standalone_pytorch.sh 0 2 2 4 cifar10 ./../../../data/cifar10/datasets hetero 2 3 0.03 sgd 1
+sh run_fedavg_multiclient_standalone_pytorch.sh 0 2 2 4 mnist ./../../../data/mnist hetero 2 3 0.03 sgd 1
+#sh run_fedavg_multiclient_standalone_pytorch.sh 0 2 2 4 cifar10 ./../../../data/cifar10/datasets hetero 2 3 0.03 sgd 1
 #sh run_fedavg_multiclient_standalone_pytorch.sh 0 2 2 4 shakespeare ./../../../data/shakespeare rnn hetero 1 1 0.8 sgd 1
 #sh run_fedavg_multiclient_standalone_pytorch.sh 0 2 2 4 femnist ./../../../data/FederatedEMNIST/datasets homo 1 1 0.03 sgd 1
 #sh run_fedavg_multiclient_standalone_pytorch.sh 0 2 2 4 fed_shakespeare ./../../../data/fed_shakespeare/datasets rnn hetero 1 1 0.8 sgd 1

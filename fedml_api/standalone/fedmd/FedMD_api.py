@@ -36,11 +36,10 @@ class FedMDAPI(HeterogeneousModelBaseTrainerAPI):
         public_dataset_size = 0
 
         logging.info('############ Creating public dataset ############')
-        for data_loader in list(self.train_data_local_dict.values())[self.start_local_client_idx:]:
-            public_dataset_size += len(data_loader.dataset)
-            public_datasets.append(data_loader)
-            if public_dataset_size >= args.public_dataset_size:
-                break
+        for c in self.client_list:
+            client_shared_data = c.share_data(args.share_percentage, args)
+            public_dataset_size += len(client_shared_data.dataset)
+            public_datasets.append(client_shared_data)
 
         self.public_data = PublicDataset(public_datasets)
         logging.info(f'Public dataset size = {public_dataset_size}')
@@ -118,11 +117,19 @@ class FedMDAPI(HeterogeneousModelBaseTrainerAPI):
                       self.client_list]
         wandb.log({'Client Dataset Size Distribution': wandb.Table(columns=columns, data=table_data)})
 
-        client_label_counts = [c.get_training_label_distribution() for c in self.client_list]
+        # Train
+        client_label_counts = [c.get_label_distribution(mode='train') for c in self.client_list]
         client_training_label_count = {client_idx: label_count for client_idx, label_count in client_label_counts}
 
         # Add public dataset
         train_classes = list(torch.concat([label for _, label in self.public_data], dim=0).numpy())
         client_training_label_count[-1] = dict(Counter(train_classes))
 
-        plot_label_distributions(client_training_label_count, alpha=self.args.partition_alpha)
+        plot_label_distributions(client_training_label_count, self.class_num, alpha=self.args.partition_alpha,
+                                 dataset='Train')
+
+        # Test
+        client_label_counts = [c.get_label_distribution(mode='test') for c in self.client_list]
+        client_test_label_count = {client_idx: label_count for client_idx, label_count in client_label_counts}
+        plot_label_distributions(client_test_label_count, self.class_num, alpha=self.args.partition_alpha,
+                                 dataset='Test')
