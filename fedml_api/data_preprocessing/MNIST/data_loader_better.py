@@ -121,7 +121,7 @@ def load_partition_data_distributed_mnist(process_id, dataset, data_dir, partiti
                                     )
 
 
-def load_partition_data_mnist_better(dataset, data_dir, partition_method, partition_alpha, client_number, batch_size,
+def load_partition_data_mnist_better(dataset, data_dir, partition_method, partition_alpha, client_number, batch_size, r,
                                      silo_proc_num=0):
     return load_partition_data(data_dir, dataset=load_mnist_data(data_dir),
                                global_dataloaders=get_dataloader(dataset, data_dir, batch_size, batch_size),
@@ -130,5 +130,6 @@ def load_partition_data_mnist_better(dataset, data_dir, partition_method, partit
                                partition_alpha=partition_alpha,
                                client_number=client_number,
                                batch_size=batch_size,
+                               r=r,
                                silo_proc_num=silo_proc_num
                                )

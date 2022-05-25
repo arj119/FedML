@@ -13,20 +13,36 @@ def get_label_indices(y):
     return label_indices
 
 
-def get_partition_indices_train(X, y, num_classes, partition, num_users, alpha, dataidx_map_file_path=None,
+def get_partition_indices_train(X, y, num_classes, partition, num_users, alpha, r, dataidx_map_file_path=None,
                                 distribution_file_path=None):
-    n = X.shape[0]
+    """
+
+    Args:
+        X: X of dataset (inputs)
+        y: y of dataset (labels)
+        num_classes: Number of classes in the dataset
+        partition: How to partition the dataset e.g. 'homo', 'hetero'
+        num_users: Number of users to split across
+        alpha: LDA alpha to distribute dataset with. Closer to 0 the more non-iid the distribution will be
+        r: Percentage of training set to use (0 - 1)
+        dataidx_map_file_path: Preprepared data indices by user
+        distribution_file_path: Preprepared distribution file path
+
+    Returns:
+
+    """
+    N = int(y.shape[0] * r)
+    indices_to_use = np.random.choice(y.shape[0], size=(N,), replace=False)
+
     net_dataidx_map = {}
 
     if partition == "homo":
-        total_num = n
-        idxs = np.random.permutation(total_num)
+        idxs = indices_to_use
         batch_idxs = np.array_split(idxs, num_users)
         net_dataidx_map = {i: batch_idxs[i] for i in range(num_users)}
 
     elif partition == "hetero":
         min_size = 0
-        N = y.shape[0]
         logging.info("N train = " + str(N))
 
         idx_batch = []
@@ -34,7 +50,7 @@ def get_partition_indices_train(X, y, num_classes, partition, num_users, alpha, 
             idx_batch = [[] for _ in range(num_users)]
             # for each class in the dataset
             for k in range(num_classes):
-                idx_k = np.where(y == k)[0]
+                idx_k = np.where(y[indices_to_use] == k)[0]
                 np.random.shuffle(idx_k)
                 proportions = np.random.dirichlet(np.repeat(alpha, num_users))
                 ## Balance
@@ -46,7 +62,7 @@ def get_partition_indices_train(X, y, num_classes, partition, num_users, alpha, 
 
         for j in range(num_users):
             np.random.shuffle(idx_batch[j])
-            net_dataidx_map[j] = idx_batch[j]
+            net_dataidx_map[j] = indices_to_use[idx_batch[j]]
 
     elif partition == "hetero-fix":
         net_dataidx_map = read_net_dataidx_map(dataidx_map_file_path)
@@ -67,7 +83,8 @@ def get_partition_indices_test(X_test, y_test, num_classes, num_users, traindata
     idx = {l: 0 for l in range(num_classes)}  # tracks start of indices for each label used in sampling
     testdata_cls_counts = defaultdict(dict)
     for user in range(num_users):
-        user_sampled_labels = range(num_classes) #if traindata_cls_counts is None else list(traindata_cls_counts[user].keys())
+        user_sampled_labels = range(
+            num_classes)  # if traindata_cls_counts is None else list(traindata_cls_counts[user].keys())
         for label in user_sampled_labels:
             num_samples = int(len(label_indices[label]) / num_users)
             assert num_samples + idx[label] <= len(label_indices[label])
@@ -121,8 +138,7 @@ def read_data_distribution(filename):
 
 
 def load_partition_data(data_dir, dataset, global_dataloaders, get_dataloader_test, partition_method, partition_alpha,
-                        client_number, batch_size,
-                        silo_proc_num=0):
+                        client_number, batch_size, r, silo_proc_num=0):
     X_train, y_train, X_test, y_test = dataset
     class_num = len(np.unique(y_train))
 
@@ -130,7 +146,8 @@ def load_partition_data(data_dir, dataset, global_dataloaders, get_dataloader_te
                                                                                partition=partition_method,
                                                                                num_classes=class_num,
                                                                                num_users=client_number,
-                                                                               alpha=partition_alpha)
+                                                                               alpha=partition_alpha,
+                                                                               r=r)
 
     test_user_dataidx_map, testdata_cls_counts = get_partition_indices_test(X_test, y_test, num_classes=class_num,
                                                                             num_users=client_number,

@@ -122,7 +122,7 @@ def load_partition_data_distributed_cifar10(process_id, dataset, data_dir, parti
                                     )
 
 
-def load_partition_data_cifar10(dataset, data_dir, partition_method, partition_alpha, client_number, batch_size,
+def load_partition_data_cifar10(dataset, data_dir, partition_method, partition_alpha, client_number, batch_size, r,
                                 silo_proc_num=0):
     return load_partition_data(data_dir, dataset=load_cifar10_data(data_dir),
                                global_dataloaders=get_dataloader(dataset, data_dir, batch_size, batch_size),
@@ -131,5 +131,6 @@ def load_partition_data_cifar10(dataset, data_dir, partition_method, partition_a
                                partition_alpha=partition_alpha,
                                client_number=client_number,
                                batch_size=batch_size,
-                               silo_proc_num=silo_proc_num
+                               r=r,
+                               silo_proc_num=silo_proc_num,
                                )

@@ -10,13 +10,16 @@ def create_argparser(parser):
     parser.add_argument('--dataset', type=str, default='mnist', metavar='N',
                         help='dataset used for training')
 
+    parser.add_argument('--dataset_r', type=float, default=0.25, metavar='R',
+                        help='percentage of training dataset to use')
+
     parser.add_argument('--data_dir', type=str, default='./../../../data/mnist',
                         help='data directory')
 
-    parser.add_argument('--partition_method', type=str, default='hetero', metavar='N',
+    parser.add_argument('--partition_method', type=str, default='hetero', metavar='PM',
                         help='how to partition the dataset on local workers')
 
-    parser.add_argument('--partition_alpha', type=float, default=0.5, metavar='PA',
+    parser.add_argument('--partition_alpha', type=float, default=0.1, metavar='PA',
                         help='partition alpha (default: 0.5)')
 
     parser.add_argument('--batch_size', type=int, default=64, metavar='N',
@@ -30,7 +33,7 @@ def create_argparser(parser):
 
     parser.add_argument('--wd', help='weight decay parameter;', type=float, default=0.001)
 
-    parser.add_argument('--epochs', type=int, default=5, metavar='EP',
+    parser.add_argument('--epochs', type=int, default=10, metavar='EP',
                         help='how many epochs will be trained locally')
 
     parser.add_argument('--client_num_in_total', type=int, default=20, metavar='NN',

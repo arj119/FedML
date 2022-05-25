@@ -221,7 +221,7 @@ def load_partition_data_distributed_cinic10(process_id, dataset, data_dir, parti
                                     )
 
 
-def load_partition_data_cinic10(dataset, data_dir, partition_method, partition_alpha, client_number, batch_size):
+def load_partition_data_cinic10(dataset, data_dir, partition_method, partition_alpha, client_number, batch_size, r):
     return load_partition_data(data_dir, dataset=load_cinic10_data(data_dir),
                                global_dataloaders=get_dataloader(dataset, data_dir, batch_size, batch_size),
                                get_dataloader_test=get_dataloader_test,
@@ -229,4 +229,5 @@ def load_partition_data_cinic10(dataset, data_dir, partition_method, partition_a
                                partition_alpha=partition_alpha,
                                client_number=client_number,
                                batch_size=batch_size,
+                               r=r
                                )
