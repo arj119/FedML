@@ -17,3 +17,12 @@ run-fd_faug-experiments:
 
 run-fedssgan-experiments:
 	./fedssgan.sh
+
+run-mnist-experiments:
+	./run_fed_experiment.sh baseline mnist mnist
+	./run_fed_experiment.sh centralised mnist mnist
+	./run_fed_experiment.sh fedavg_multiclient mnist mnist
+	./run_fed_experiment.sh fedmd mnist mnist
+	./run_fed_experiment.sh feddtg_arjun mnist mnist
+	./run_fed_experiment.sh feddtg mnist mnist
+	./run_fed_experiment.sh fd_faug mnist mnist

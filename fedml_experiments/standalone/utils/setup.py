@@ -9,7 +9,7 @@ from fedml_experiments.standalone.utils.config import create_argparser
 from fedml_experiments.standalone.utils.dataset import load_data
 
 
-def setup(algorithm_name, add_custom_args):
+def setup(algorithm_name, add_custom_args, seed, group_id=None):
     logging.basicConfig()
     logger = logging.getLogger()
 
@@ -23,16 +23,17 @@ def setup(algorithm_name, add_custom_args):
     wandb.init(
         project="fedml",
         name=f"{algorithm_name}",  # -r" + str(args.comm_round) + "-e" + str(args.epochs) + "-lr" + str(args.lr),
-        config=args
+        config=args,
+        group=group_id
     )
     wandb.define_metric("*", step_metric="Round")
     # Set the random seed. The np.random seed determines the dataset partition.
     # The torch_manual_seed determines the initial weight.
     # We fix these two, so that we can reproduce the result.
-    random.seed(0)
-    np.random.seed(0)
-    torch.manual_seed(0)
-    torch.cuda.manual_seed_all(0)
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
     torch.backends.cudnn.deterministic = True
 
     # load data
