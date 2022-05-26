@@ -36,7 +36,7 @@ def add_args(parser):
     parser.add_argument('--revisit_epochs', type=int, default=5,
                         help='Number of epochs to be carries out on private dataset in local training')
 
-    parser.add_argument('--share_percentage', type=float, default=0.1,
+    parser.add_argument('--share_percentage', type=float, default=0.05,
                         help='Number of epochs to be carries out on private dataset in local training')
 
     parser.add_argument('--client_config_file', type=str,

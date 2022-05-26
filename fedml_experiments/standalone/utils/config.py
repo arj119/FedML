@@ -33,7 +33,7 @@ def create_argparser(parser):
 
     parser.add_argument('--wd', help='weight decay parameter;', type=float, default=0.001)
 
-    parser.add_argument('--epochs', type=int, default=10, metavar='EP',
+    parser.add_argument('--epochs', type=int, default=5, metavar='EP',
                         help='how many epochs will be trained locally')
 
     parser.add_argument('--client_num_in_total', type=int, default=20, metavar='NN',

@@ -12,7 +12,6 @@ from fedml_experiments.standalone.utils.dataset import load_data
 def setup(algorithm_name, add_custom_args):
     logging.basicConfig()
     logger = logging.getLogger()
-    logger.setLevel(logging.DEBUG)
 
     parser = create_argparser(argparse.ArgumentParser(description=f'{algorithm_name}-standalone'))
     parser = add_custom_args(parser)
@@ -23,7 +22,7 @@ def setup(algorithm_name, add_custom_args):
 
     wandb.init(
         project="fedml",
-        name=f"{algorithm_name}", #-r" + str(args.comm_round) + "-e" + str(args.epochs) + "-lr" + str(args.lr),
+        name=f"{algorithm_name}",  # -r" + str(args.comm_round) + "-e" + str(args.epochs) + "-lr" + str(args.lr),
         config=args
     )
     wandb.define_metric("*", step_metric="Round")
