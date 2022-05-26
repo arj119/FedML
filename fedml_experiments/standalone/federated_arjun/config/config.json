@@ -1,0 +1,9 @@
+{
+  "adapter_model": "cnn_small",
+  "client_models": [
+    {
+      "model": "cnn_medium",
+      "freq": 10
+    }
+  ]
+}

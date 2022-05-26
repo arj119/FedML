@@ -1,0 +1,10 @@
+{
+  "generator": "conditional_generator",
+  "discriminator": "cnn_medium",
+  "client_models": [
+    {
+      "model": "cnn_medium",
+      "freq": 10
+    }
+  ]
+}
