@@ -10,6 +10,7 @@ import torchvision.transforms as tfs
 
 from fedml_api.standalone.fedDTG_arjun.ac_gan_model_trainer import ACGANModelTrainer
 from fedml_api.standalone.fedDTG_arjun.client import FedDTGArjunClient
+from fedml_api.standalone.fedDTG_arjun.model_trainer import FedDTGArjunModelTrainer
 from fedml_api.standalone.utils.HeterogeneousModelBaseTrainerAPI import HeterogeneousModelBaseTrainerAPI
 
 
@@ -48,7 +49,7 @@ class FedDTGArjunAPI(HeterogeneousModelBaseTrainerAPI):
         c_idx = 0
         for local_model, freq in client_models:
             for i in range(freq):
-                model_trainer = ACGANModelTrainer(
+                model_trainer = FedDTGArjunModelTrainer(
                     copy.deepcopy(self.generator.model),
                     copy.deepcopy(local_model)
                 )
@@ -107,10 +108,10 @@ class FedDTGArjunAPI(HeterogeneousModelBaseTrainerAPI):
             local_validity = []
             logging.info("########## Acquiring distillation logits... #########")
             for idx, client in enumerate(self.client_list):
-                logits, validity = client.get_distillation_logits(copy.deepcopy(w_global),
-                                                                  distillation_dataset)
+                # logits, validity = client.get_distillation_logits(copy.deepcopy(w_global), distillation_dataset)
+                logits = client.get_distillation_logits(copy.deepcopy(w_global), distillation_dataset)
                 local_logits.append(logits)
-                local_validity.append(validity)
+                # local_validity.append(validity)
                 logging.info(f"Client {idx} complete")
 
             # Calculate average soft labels
@@ -120,10 +121,14 @@ class FedDTGArjunAPI(HeterogeneousModelBaseTrainerAPI):
                 # Calculate teacher logits for client
                 logging.info(f"##### Client {idx} #####")
                 consensus_logits = torch.mean(torch.stack(local_logits[:idx] + local_logits[idx + 1:]), dim=0)
-                consensus_validity = torch.mean(torch.stack(local_validity[:idx] + local_validity[idx + 1:]), dim=0)
+                # consensus_validity = torch.mean(torch.stack(local_validity[:idx] + local_validity[idx + 1:]), dim=0)
 
-                consensus_outputs = DataLoader(TensorDataset(consensus_logits, consensus_validity),
+                # consensus_outputs = DataLoader(TensorDataset(consensus_logits, consensus_validity),
+                #                                batch_size=self.args.batch_size)
+
+                consensus_outputs = DataLoader(TensorDataset(consensus_logits),
                                                batch_size=self.args.batch_size)
+
                 client.classifier_knowledge_distillation(consensus_outputs, distillation_dataset)
 
             if round_idx % 1 == 0:
