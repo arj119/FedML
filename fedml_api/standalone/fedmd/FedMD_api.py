@@ -76,14 +76,17 @@ class FedMDAPI(HeterogeneousModelBaseTrainerAPI):
         for round_idx in range(self.args.comm_round):
 
             logging.info(f"################Communication round : {round_idx}\n")
+            client_subset = self._client_sampling(round_idx)
 
             logging.info(f"1. Communication Start")
             local_logits = []
-            for idx, client in enumerate(self.client_list):
+
+            client: Client
+            for client in client_subset:
                 # Communication: Each party computes the class scores on the public dataset, and transmits the result
                 # to a central server
                 logits = client.get_logits(self.public_data)
-                logging.info(f'Retrieving client {idx} logits: {logits.shape}')
+                logging.info(f'Retrieving client {client.client_idx} logits: {logits.shape}')
                 local_logits.append(logits)
             logging.info(f"1. Communication End")
 
@@ -94,8 +97,8 @@ class FedMDAPI(HeterogeneousModelBaseTrainerAPI):
 
             logging.info(f"3. Digest + Revisit Start")
             # Distribute, Digest and Revisit
-            for idx, client in enumerate(self.client_list):
-                logging.info(f'\nTraining client: {idx}\n')
+            for client in client_subset:
+                logging.info(f'\nTraining client: {client.client_idx}\n')
                 client.train(self.public_data, consensus_logits)
             logging.info(f"3. Digest + Revisit End")
 

@@ -79,10 +79,12 @@ class FedDTGAPI(HeterogeneousModelBaseTrainerAPI):
             # ---------------
             logging.info('########## Gan Training ########')
 
+            client_subset = self._client_sampling(round_idx)
+
             g_locals, d_locals = [], []
 
             client: FedDTGClient
-            for idx, client in enumerate(self.client_list):
+            for client in client_subset:
                 # Local round
                 w_g, w_d = client.train((copy.deepcopy(g_global), copy.deepcopy(d_global)), round_idx)
 
@@ -115,22 +117,22 @@ class FedDTGAPI(HeterogeneousModelBaseTrainerAPI):
 
             local_logits = []
             logging.info("########## Acquiring distillation logits... #########")
-            for idx, client in enumerate(self.client_list):
+            for client in client_subset:
                 # logits = client.get_distillation_logits((copy.deepcopy(g_global), copy.deepcopy(d_global)),
                 #                                         noise_labels_loader)
                 logits = client.get_distillation_logits((copy.deepcopy(g_global), copy.deepcopy(d_global)),
                                                         distillation_dataset)
                 local_logits.append(logits)
-                logging.info(f"Client {idx} complete")
+                logging.info(f"Client {client.client_idx} complete")
 
             # Calculate average soft labels
             # consensus_logits = torch.mean(torch.stack(local_logits), dim=0)
             # consensus_logits_data_loader = DataLoader(TensorDataset(consensus_logits), batch_size=self.args.batch_size)
 
             logging.info(f"######## Knowledge distillation stage ########")
-            for idx, client in enumerate(self.client_list):
+            for idx, client in enumerate(client_subset):
                 # Calculate teacher logits for client
-                logging.info(f"##### Client {idx} #####")
+                logging.info(f"##### Client {client.client_idx} #####")
                 consensus_logits = torch.mean(torch.stack(local_logits[:idx] + local_logits[idx + 1:]), dim=0)
                 consensus_logits_data_loader = DataLoader(TensorDataset(consensus_logits),
                                                           batch_size=self.args.batch_size)

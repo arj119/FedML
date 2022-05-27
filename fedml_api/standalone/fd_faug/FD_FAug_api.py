@@ -49,31 +49,36 @@ class FDFAugAPI(HeterogeneousModelBaseTrainerAPI):
 
             logging.info(f"################Communication round : {round_idx}\n")
 
+            client_subset = self._client_sampling(round_idx)
+
             logging.info(f"1. Global ensembling phase")
             global_label_logits = dict()
             local_logit_dict = dict()
-            for idx, client in enumerate(self.client_list):
+
+            client: Client
+            for client in client_subset:
                 # Communication: Each party computes the class scores on the public dataset, and transmits the result
                 # to a central server
                 client_label_average_logits: dict = client.train()
                 # logging.info(f'Retrieving client {idx} logits: {client_label_average_logits}')
 
-                local_logit_dict[idx] = client_label_average_logits
+                local_logit_dict[client.client_idx] = client_label_average_logits
 
                 for label, logit in client_label_average_logits.items():
                     global_label_logits[label] = global_label_logits.get(label, torch.zeros_like(logit)) + logit
 
             logging.info(f'Updating global average logits and sending to clients')
-            M = len(self.client_list)
+            M = len(client_subset)
 
-            for idx, client in enumerate(self.client_list):
+            for client in client_subset:
                 # Send ensemble logit vector back to client
                 new_client_label_average_logits = dict()
                 for label, sum_logits in global_label_logits.items():
-                    new_client_label_average_logits[label] = (sum_logits - local_logit_dict[idx][label]) / (M - 1)
+                    new_client_label_average_logits[label] = (sum_logits - local_logit_dict[client.client_idx][
+                        label]) / (M - 1)
 
                 # Return updated global logits back to client
-                logging.info(f'Sent to client: {idx}')
+                logging.info(f'Sent to client: {client.client_idx}')
                 client.update_global_label_logits(new_client_label_average_logits)
 
             # test results
@@ -86,4 +91,3 @@ class FDFAugAPI(HeterogeneousModelBaseTrainerAPI):
                     self._local_test_on_validation_set(round_idx)
                 else:
                     self._local_test_on_all_clients(round_idx)
-

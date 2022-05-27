@@ -53,7 +53,7 @@ class FedDTGExperiment(ExperimentBase):
             client_models.append((model, entry['freq']))
             client_num += entry['freq']
 
-        args.client_num_in_total = client_num
+        assert args.client_num_in_total == client_num
         logging.info(client_models)
 
         api = FedDTGAPI(dataset, device, args, generator, discriminator, client_models)

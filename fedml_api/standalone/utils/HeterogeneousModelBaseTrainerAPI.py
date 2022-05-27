@@ -43,15 +43,15 @@ class HeterogeneousModelBaseTrainerAPI(ABC):
     def train(self):
         pass
 
-    def _client_sampling(self, round_idx, client_num_in_total, client_num_per_round):
-        if client_num_in_total == client_num_per_round:
-            client_indexes = [client_index for client_index in range(client_num_in_total)]
+    def _client_sampling(self, round_idx):
+        if self.args.client_num_in_total == self.args.client_num_per_round:
+            client_indices = [client_index for client_index in range(self.args.client_num_in_total)]
         else:
-            num_clients = min(client_num_per_round, client_num_in_total)
+            num_clients = min(self.args.client_num_per_round, self.args.client_num_in_total)
             np.random.seed(round_idx)  # make sure for each comparison, we are selecting the same clients each round
-            client_indexes = np.random.choice(range(client_num_in_total), num_clients, replace=False)
-        logging.info("client_indexes = %s" % str(client_indexes))
-        return client_indexes
+            client_indices = np.random.choice(range(self.args.client_num_in_total), num_clients, replace=False)
+        logging.info("client_indices = %s" % str(client_indices))
+        return [self.client_list[i] for i in client_indices]
 
     def _generate_validation_set(self, num_samples=10000):
         test_data_num = len(self.test_global.dataset)

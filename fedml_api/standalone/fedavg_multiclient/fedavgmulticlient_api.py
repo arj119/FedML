@@ -10,8 +10,6 @@ import wandb
 from fedml_api.standalone.fedavg.my_model_trainer import MyModelTrainer
 from fedml_api.standalone.fedavg_multiclient.client import FedAvgMultiClient
 from fedml_api.standalone.fedavg_multiclient.model_trainer import FedAvgMultiClientModelTrainer
-from fedml_api.standalone.federated_arjun.client import FedArjunClient
-from fedml_api.standalone.federated_arjun.model_trainer import FedArjunModelTrainer
 from fedml_api.standalone.utils.HeterogeneousModelBaseTrainerAPI import HeterogeneousModelBaseTrainerAPI
 
 
@@ -55,7 +53,7 @@ class FedAvgMultiClientAPI(HeterogeneousModelBaseTrainerAPI):
 
             w_locals = []
 
-            for idx, client in enumerate(self.client_list):
+            for client in self._client_sampling(round_idx):
                 # Local round
                 w = client.train(copy.deepcopy(w_global))
                 # self.logger.info("local weights = " + str(w))

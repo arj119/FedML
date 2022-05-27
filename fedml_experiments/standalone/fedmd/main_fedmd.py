@@ -55,7 +55,7 @@ class FedMDExperiment(ExperimentBase):
             client_models.append((model, entry['freq']))
             client_num += entry['freq']
 
-        args.client_num_in_total = client_num
+        assert args.client_num_in_total == client_num
         logging.info(client_models)
 
         api = FedMDAPI(dataset, device, args, client_models)

@@ -70,6 +70,8 @@ class FedDTGArjunAPI(HeterogeneousModelBaseTrainerAPI):
 
             logging.info("################Communication round : {}".format(round_idx))
 
+            client_subset = self._client_sampling(round_idx)
+
             # ---------------
             # GAN Training
             # ---------------
@@ -78,7 +80,7 @@ class FedDTGArjunAPI(HeterogeneousModelBaseTrainerAPI):
             w_locals = []
 
             client: FedDTGArjunClient
-            for idx, client in enumerate(self.client_list):
+            for client in client_subset:
                 # Local round
                 w_local = client.train(copy.deepcopy(w_global), round_idx)
 
@@ -107,17 +109,17 @@ class FedDTGArjunAPI(HeterogeneousModelBaseTrainerAPI):
             local_logits = []
             local_validity = []
             logging.info("########## Acquiring distillation logits... #########")
-            for idx, client in enumerate(self.client_list):
+            for client in client_subset:
                 # logits, validity = client.get_distillation_logits(copy.deepcopy(w_global), distillation_dataset)
                 logits = client.get_distillation_logits(copy.deepcopy(w_global), distillation_dataset)
                 local_logits.append(logits)
                 # local_validity.append(validity)
-                logging.info(f"Client {idx} complete")
+                logging.info(f"Client {client.client_idx} complete")
 
             # Calculate average soft labels
 
             logging.info(f"######## Knowledge distillation stage ########")
-            for idx, client in enumerate(self.client_list):
+            for idx, client in enumerate(client_subset):
                 # Calculate teacher logits for client
                 logging.info(f"##### Client {idx} #####")
                 consensus_logits = torch.mean(torch.stack(local_logits[:idx] + local_logits[idx + 1:]), dim=0)

@@ -4,7 +4,7 @@
   "client_models": [
     {
       "model": "cnn_medium",
-      "freq": 10
+      "freq": 20
     }
   ]
 }

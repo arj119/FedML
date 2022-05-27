@@ -26,9 +26,9 @@ class FedAvgMultiClientExperiment(ExperimentBase):
         return parser
 
     def experiment_start(self, client_model_config, args, device, dataset):
-        model = create_model(args, model_name=client_model_config['model'], output_dim=dataset[7])
         client_num = client_model_config['client_num']
-        args.client_num_in_total = client_num
+        assert args.client_num_in_total == client_num
+        model = create_model(args, model_name=client_model_config['model'], output_dim=dataset[7])
 
         # model = create_model(args, model_name=args.model, output_dim=dataset[7])
         # model_trainer = custom_model_trainer(args, model)

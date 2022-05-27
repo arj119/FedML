@@ -1,4 +1,4 @@
 {
   "model": "cnn_medium",
-  "client_num": 10
+  "client_num": 20
 }

@@ -43,7 +43,8 @@ class FedArjunAPI(HeterogeneousModelBaseTrainerAPI):
                     copy.deepcopy(local_model),
                     self.args)
                 c = FedArjunClient(c_idx, train_data_local_dict[c_idx], test_data_local_dict[c_idx],
-                                   train_data_local_num_dict[c_idx], self.test_global, self.args, self.device, model_trainer)
+                                   train_data_local_num_dict[c_idx], self.test_global, self.args, self.device,
+                                   model_trainer)
                 c_idx += 1
                 self.client_list.append(c)
 
@@ -63,7 +64,7 @@ class FedArjunAPI(HeterogeneousModelBaseTrainerAPI):
 
             w_locals = []
 
-            for idx, client in enumerate(self.client_list):
+            for client in self._client_sampling(round_idx):
                 # Local round
                 w = client.train(copy.deepcopy(w_global))
                 # self.logger.info("local weights = " + str(w))
