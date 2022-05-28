@@ -40,16 +40,8 @@ class FedAvgMultiClientModelTrainer(ModelTrainer):
         """
         model = self.model.to(device)
 
-        if args.client_optimizer == "sgd":
-            optimizer = torch.optim.SGD(self.model.parameters(), lr=args.lr)
-
-        else:
-            optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, self.model.parameters()),
-                                         lr=args.lr,
-                                         weight_decay=args.wd, amsgrad=True)
-
+        optimizer = self.get_client_optimiser(model, args.client_optimizer, args.lr)
         # train and update assuming classification task
-        kd_criterion = SoftTarget(T=4).to(device)
         cls_criterion = nn.CrossEntropyLoss().to(device)
 
         self._train_loop(model, train_data, cls_criterion, args.epochs, optimizer, device)
@@ -153,13 +145,7 @@ class FedAvgMultiClientModelTrainer(ModelTrainer):
                """
         model = self.model.to(device)
 
-        if args.client_optimizer == "sgd":
-            optimizer = torch.optim.SGD(self.model.parameters(), lr=args.lr)
-
-        else:
-            optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, self.model.parameters()),
-                                         lr=args.lr,
-                                         weight_decay=args.wd, amsgrad=True)
+        optimizer = self.get_client_optimiser(model, args.client_optimizer, args.lr)
 
         # train and update
         criterion = nn.CrossEntropyLoss().to(device)

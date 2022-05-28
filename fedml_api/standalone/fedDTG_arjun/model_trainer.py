@@ -147,18 +147,7 @@ class FedDTGArjunModelTrainer(ACGANModelTrainer):
 
         kd_alpha = args.kd_alpha
 
-        if args.client_optimizer == "sgd":
-            optimiser_D = torch.optim.SGD(self.local_model.parameters(), lr=args.lr)
-
-
-        else:
-            beta1, beta2 = 0.5, 0.999
-            optimiser_D = torch.optim.Adam(filter(lambda p: p.requires_grad, self.local_model.parameters()),
-                                           lr=args.lr,
-                                           weight_decay=args.wd,
-                                           amsgrad=True,
-                                           betas=(beta1, beta2)
-                                           )
+        optimiser_D = self.get_client_optimiser(classifier, args.client_optimizer, args.lr)
 
         epoch_dist_loss, epoch_kd_loss = [], []
         for epoch in range(args.kd_epochs):

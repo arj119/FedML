@@ -53,32 +53,9 @@ class ACGANModelTrainer(ModelTrainer):
         generator, discriminator, local_model = self.generator.to(device), self.discriminator.to(
             device), self.local_model.to(device)
 
-        if args.client_optimizer == "sgd":
-            optimiser_G = torch.optim.SGD(self.generator.parameters(), lr=args.lr)
-            optimiser_D = torch.optim.SGD(self.discriminator.parameters(), lr=args.lr)
-            optimiser_C = torch.optim.SGD(self.local_model.parameters(), lr=args.lr)
-
-
-        else:
-            beta1, beta2 = 0.5, 0.999
-            optimiser_G = torch.optim.Adam(filter(lambda p: p.requires_grad, self.generator.parameters()),
-                                           lr=args.lr,
-                                           weight_decay=args.wd,
-                                           amsgrad=True,
-                                           betas=(beta1, beta2)
-                                           )
-            optimiser_D = torch.optim.Adam(filter(lambda p: p.requires_grad, self.discriminator.parameters()),
-                                           lr=args.lr,
-                                           weight_decay=args.wd,
-                                           amsgrad=True,
-                                           betas=(beta1, beta2)
-                                           )
-            optimiser_C = torch.optim.Adam(filter(lambda p: p.requires_grad, self.local_model.parameters()),
-                                           lr=args.lr,
-                                           weight_decay=args.wd,
-                                           amsgrad=True,
-                                           betas=(beta1, beta2)
-                                           )
+        optimiser_G = self.get_client_optimiser(generator, args.gen_optimizer, args.gen_lr)
+        optimiser_D = self.get_client_optimiser(discriminator, args.client_optimizer, args.lr)
+        optimiser_C = self.get_client_optimiser(local_model, args.client_optimizer, args.lr)
 
         self._gan_training(generator, discriminator, local_model, train_data, args.epochs, optimiser_G,
                            optimiser_D, optimiser_C, device)
@@ -306,37 +283,6 @@ class ACGANModelTrainer(ModelTrainer):
 
     def test_on_the_server(self, train_data_local_dict, test_data_local_dict, device, args=None) -> bool:
         return False
-
-    def pre_train(self, private_data, device, args):
-        """
-               Pre-training in FedMD algorithm to do transfer learning from public data set
-               to private dataset
-
-               Args:
-                   private_data: Private data only known to the client
-                   device: Device to perform training on
-                   args: Other args
-               Returns:
-
-               """
-        model = self.local_model
-        model.to(device)
-
-        if args.client_optimizer == "sgd":
-            optimiser_D = torch.optim.SGD(self.local_model.parameters(), lr=args.lr)
-
-        else:
-            beta1, beta2 = 0.5, 0.999
-            optimiser_D = torch.optim.Adam(filter(lambda p: p.requires_grad, self.local_model.parameters()),
-                                           lr=args.lr,
-                                           weight_decay=args.wd,
-                                           amsgrad=True,
-                                           betas=(beta1, beta2)
-                                           )
-
-        # Transfer learning to private dataset
-        self._train_loop(model, train_data=private_data, criterion=None, epochs=args.pretrain_epochs_private,
-                         optimizer=optimiser_D, device=device)
 
     def _get_pseudo_labels_with_probability(self, disc_logits):
         class_probabilities = F.softmax(disc_logits, dim=-1)

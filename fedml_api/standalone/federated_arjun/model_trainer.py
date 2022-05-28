@@ -24,21 +24,10 @@ class FedArjunModelTrainer(ModelTrainer):
         self.local_model = local_model
         self.train_adapter_model_only = train_adapter_model_only
 
-        if args.client_optimizer == "sgd":
-            self.local_optimizer_kd = torch.optim.SGD(self.local_model.parameters(), lr=args.lr)
-            self.local_optimizer = torch.optim.SGD(self.local_model.parameters(), lr=args.lr)
-            self.adapter_optimizer = torch.optim.SGD(self.adapter_model.parameters(), lr=args.lr)
-
-        else:
-            self.local_optimizer_kd = torch.optim.Adam(filter(lambda p: p.requires_grad, self.local_model.parameters()),
-                                                       lr=args.lr,
-                                                       weight_decay=args.wd, amsgrad=True)
-            self.local_optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, self.local_model.parameters()),
-                                                    lr=args.lr,
-                                                    weight_decay=args.wd, amsgrad=True)
-            self.adapter_optimizer = torch.optim.Adam(
-                filter(lambda p: p.requires_grad, self.adapter_model.parameters()), lr=args.lr,
-                weight_decay=args.wd, amsgrad=True)
+        # train_data, kd_transfer_data = train_data
+        self.local_optimizer_kd = self.get_client_optimiser(self.local_model, args.client_optimizer, args.lr)
+        self.local_optimizer = self.get_client_optimiser(self.local_model, args.client_optimizer, args.lr)
+        self.adapter_optimizer = self.get_client_optimiser(self.adapter_model, args.client_optimizer, args.lr)
 
     def get_model_params(self):
         return self.adapter_model.cpu().state_dict()
@@ -59,22 +48,9 @@ class FedArjunModelTrainer(ModelTrainer):
         adapter_model, local_model = self.adapter_model.to(device), self.local_model.to(device)
 
         # train_data, kd_transfer_data = train_data
-
-        if args.client_optimizer == "sgd":
-            local_optimizer_kd = torch.optim.SGD(self.local_model.parameters(), lr=args.lr)
-            local_optimizer = torch.optim.SGD(self.local_model.parameters(), lr=args.lr)
-            adapter_optimizer = torch.optim.SGD(self.adapter_model.parameters(), lr=args.lr)
-
-        else:
-            local_optimizer_kd = torch.optim.Adam(filter(lambda p: p.requires_grad, self.local_model.parameters()),
-                                                  lr=args.lr,
-                                                  weight_decay=args.wd, amsgrad=True)
-            local_optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, self.local_model.parameters()),
-                                               lr=args.lr,
-                                               weight_decay=args.wd, amsgrad=True)
-            adapter_optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, self.adapter_model.parameters()),
-                                                 lr=args.lr,
-                                                 weight_decay=args.wd, amsgrad=True)
+        local_optimizer_kd = self.get_client_optimiser(self.local_model, args.client_optimizer, args.lr)
+        local_optimizer = self.get_client_optimiser(self.local_model, args.client_optimizer, args.lr)
+        adapter_optimizer = self.get_client_optimiser(self.adapter_model, args.client_optimizer, args.lr)
 
         # train and update assuming classification task
         kd_criterion = SoftTarget(T=4).to(device)

@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
 
+import torch
+
 
 class ModelTrainer(ABC):
     """Abstract base class for federated learning trainer.
@@ -8,6 +10,7 @@ class ModelTrainer(ABC):
        2. This class can be used in both server and client side
        3. This class is an operator which does not cache any states inside.
     """
+
     def __init__(self, model, args=None):
         self.model = model
         self.id = 0
@@ -36,3 +39,14 @@ class ModelTrainer(ABC):
     def test_on_the_server(self, train_data_local_dict, test_data_local_dict, device, args=None) -> bool:
         pass
 
+    def get_client_optimiser(self, model, optimiser_name, lr):
+        if optimiser_name == "sgd":
+            optimiser = torch.optim.SGD(model.parameters(), lr=lr)
+        else:
+            optimiser = torch.optim.Adam(model.parameters(),
+                                         lr=lr,
+                                         eps=1e-08,
+                                         weight_decay=1e-2,
+                                         amsgrad=True,
+                                         )
+        return optimiser

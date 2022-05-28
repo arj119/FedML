@@ -18,14 +18,7 @@ class CentralisedModelTrainer(ModelTrainer):
         """
         super().__init__(None)
         self.local_model = local_model
-
-        if args.client_optimizer == "sgd":
-            self.local_optimizer = torch.optim.SGD(self.local_model.parameters(), lr=args.lr)
-
-        else:
-            self.local_optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, self.local_model.parameters()),
-                                                    lr=args.lr,
-                                                    weight_decay=args.wd, amsgrad=True)
+        self.local_optimizer = self.get_client_optimiser(self.local_model, args.client_optimizer, args.lr)
 
     def get_model_params(self):
         return None
@@ -45,13 +38,7 @@ class CentralisedModelTrainer(ModelTrainer):
         """
         local_model = self.local_model.to(device)
 
-        if args.client_optimizer == "sgd":
-            local_optimizer = torch.optim.SGD(self.local_model.parameters(), lr=args.lr)
-
-        else:
-            local_optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, self.local_model.parameters()),
-                                               lr=args.lr,
-                                               weight_decay=args.wd, amsgrad=True)
+        local_optimizer = self.get_client_optimiser(local_model, args.client_optimizer, args.lr)
 
         # train and update assuming classification task
         cls_criterion = nn.CrossEntropyLoss().to(device)

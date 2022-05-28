@@ -43,25 +43,8 @@ class ACGANModelTrainer(ModelTrainer):
         """
         generator, discriminator = self.generator.to(device), self.local_model.to(device)
 
-        if args.client_optimizer == "sgd":
-            optimiser_G = torch.optim.SGD(self.generator.parameters(), lr=args.lr)
-            optimiser_D = torch.optim.SGD(self.local_model.parameters(), lr=args.lr)
-
-
-        else:
-            beta1, beta2 = 0.5, 0.999
-            optimiser_G = torch.optim.Adam(filter(lambda p: p.requires_grad, self.generator.parameters()),
-                                           lr=args.lr,
-                                           weight_decay=args.wd,
-                                           amsgrad=True,
-                                           betas=(beta1, beta2)
-                                           )
-            optimiser_D = torch.optim.Adam(filter(lambda p: p.requires_grad, self.local_model.parameters()),
-                                           lr=args.lr,
-                                           weight_decay=args.wd,
-                                           amsgrad=True,
-                                           betas=(beta1, beta2)
-                                           )
+        optimiser_G = self.get_client_optimiser(generator, args.gen_optimizer, args.gen_lr)
+        optimiser_D = self.get_client_optimiser(discriminator, args.client_optimizer, args.lr)
 
         self._gan_training(generator, discriminator, train_data, args.epochs, optimiser_G, optimiser_D, device)
 
@@ -287,17 +270,7 @@ class ACGANModelTrainer(ModelTrainer):
         model = self.local_model
         model.to(device)
 
-        if args.client_optimizer == "sgd":
-            optimiser_D = torch.optim.SGD(self.local_model.parameters(), lr=args.lr)
-
-        else:
-            beta1, beta2 = 0.5, 0.999
-            optimiser_D = torch.optim.Adam(filter(lambda p: p.requires_grad, self.local_model.parameters()),
-                                           lr=args.lr,
-                                           weight_decay=args.wd,
-                                           amsgrad=True,
-                                           betas=(beta1, beta2)
-                                           )
+        optimiser_D = self.get_client_optimiser(model, args.client_optimizer, args.lr)
 
         # Transfer learning to private dataset
         self._train_loop(model, train_data=private_data, criterion=None, epochs=args.pretrain_epochs_private,
@@ -338,3 +311,6 @@ class ACGANModelTrainer(ModelTrainer):
         # dataset = TensorDataset(synth_data, labels)
         # data_loader = DataLoader(dataset, batch_size=noise_labels.batch_size)
         return synth_data
+
+    def _train_loop(self, model, train_data, criterion, epochs, optimizer, device):
+        pass

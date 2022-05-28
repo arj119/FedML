@@ -19,24 +19,24 @@ wandb off
 ALGORITHM=$1
 DATASET=$2
 DATASET_DIR="./../../../data/$3"
-
-assert_eq() {
-  local expected="$1"
-  local actual="$2"
-  local msg
-
-  if [ "$expected" == "$actual" ]; then
-    return 0
-  else
-    echo "$expected != $actual"
-    return 1
-  fi
-}
-
-round() {
-  printf "%.${2}f" "${1}"
-}
+PARTITION_METHOD=$4
+PARTITION_ALPHA=$5
+DATASET_SAMPLE_R=$6
+COMM_ROUNDS=$7
+EPOCHS=$8
+EXPERIMENT_ID=$9
 
 # 1. MNIST standalone FedAvg
 cd ./fedml_experiments/standalone/"$ALGORITHM"
-sh run_"$ALGORITHM"_standalone_pytorch.sh 0 2 2 4 $DATASET $DATASET_DIR hetero 2 3 0.03 sgd 1
+#sh run_"$ALGORITHM"_standalone_pytorch.sh 0 2 2 4 $DATASET $DATASET_DIR hetero 2 3 0.03 sgd 1
+
+python3 "./main_$ALGORITHM.py" \
+--gpu 0 \
+--dataset "$DATASET" \
+--data_dir "$DATASET_DIR" \
+--dataset_r "$DATASET_SAMPLE_R" \
+--partition_method "$PARTITION_METHOD" \
+--partition_alpha "$PARTITION_ALPHA" \
+--comm_round $COMM_ROUNDS \
+--experiment_id $EXPERIMENT_ID \
+--epochs $EPOCHS

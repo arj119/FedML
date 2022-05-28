@@ -36,6 +36,12 @@ class FedDTGExperiment(ExperimentBase):
         parser.add_argument('--kd_alpha', type=float, default=0.8,
                             help='Weighting of knowledge distillation regularisation term')
 
+        parser.add_argument('--gen_lr', type=float, default=0.001,
+                            help='Learning rate of generator')
+
+        parser.add_argument('--gen_optimizer', type=str, default='adam',
+                            help='Optimiser of generator')
+
         parser.add_argument('--kd_epochs', type=int, default=5,
                             help='Number of knowledge distillation epochs')
 

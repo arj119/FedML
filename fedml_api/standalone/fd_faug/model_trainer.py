@@ -36,11 +36,7 @@ class FDFAugModelTrainer(ModelTrainer):
         # train and update
         criterion = nn.CrossEntropyLoss().to(device)
 
-        if args.client_optimizer == "sgd":
-            optimizer = torch.optim.SGD(self.model.parameters(), lr=args.lr)
-        else:
-            optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, self.model.parameters()), lr=args.lr,
-                                         weight_decay=args.wd, amsgrad=True)
+        optimizer = self.get_client_optimiser(model, args.client_optimizer, args.lr)
 
         # Train on public dataset
         self._train_loop(model, train_data=public_data, criterion=criterion, epochs=args.pretrain_epochs_public,
@@ -68,11 +64,7 @@ class FDFAugModelTrainer(ModelTrainer):
         # train and update assuming classification task
         criterion = nn.CrossEntropyLoss().to(device)
 
-        if args.client_optimizer == "sgd":
-            optimizer = torch.optim.SGD(self.model.parameters(), lr=args.lr)
-        else:
-            optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, self.model.parameters()), lr=args.lr,
-                                         weight_decay=args.wd, amsgrad=True)
+        optimizer = self.get_client_optimiser(model, args.client_optimizer, args.lr)
 
         model.train()
 
@@ -97,7 +89,8 @@ class FDFAugModelTrainer(ModelTrainer):
 
                 # Global logits alignment using co-distillation if provided
                 if global_average_label_logits is not None:
-                    global_average_logits_per_label = torch.stack([global_average_label_logits[l.cpu().item()] for l in labels])
+                    global_average_logits_per_label = torch.stack(
+                        [global_average_label_logits[l.cpu().item()] for l in labels])
                     # Cross entropy loss with soft targets given by softmax function applied to global average logits per label
                     soft_targets = torch.softmax(global_average_logits_per_label, dim=1)
                     kd_loss = criterion(output, soft_targets)

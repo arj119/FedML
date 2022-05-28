@@ -25,7 +25,7 @@ class ExperimentBase(ABC):
 
     def start(self):
         args = self._load_args()
-        group_id = f'{self.algorithm_name}_{args.dataset}_alpha={args.partition_alpha}_r={args.dataset_r}_{generate_id()}'
+        group_id = f'{args.dataset}_alpha={args.partition_alpha}_r={args.dataset_r}_{args.experiment_id}'
         for i in range(self.num_repetitions):
             args, device, dataset = self._setup(args, seed=i, group_id=group_id)
             client_model_config = parse_config(args.client_config_file)
