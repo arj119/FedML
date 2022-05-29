@@ -46,5 +46,5 @@ python3 "./main_$ALGORITHM.py" \
 --experiment_id "$EXPERIMENT_ID" \
 --experiment_repetitions "$EXPERIMENT_REPETITIONS" \
 --epochs "$EPOCHS" \
---client_num_in_total "$CLIENT_NUM_IN_TOTAL"\
---client_num_per_round "$CLIENT_NUM_PER_ROUND"\
+--client_num_in_total "$CLIENT_NUM_IN_TOTAL" \
+--client_num_per_round "$CLIENT_NUM_PER_ROUND" \
