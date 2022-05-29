@@ -58,7 +58,8 @@ class FedDTGArjunExperiment(ExperimentBase):
             client_models.append((model, entry['freq']))
             client_num += entry['freq']
 
-        assert args.client_num_in_total == client_num
+        if args.dataset in ['cifar10', 'cifar100', 'mnist']:
+            assert args.client_num_in_total == client_num
         logging.info(client_models)
 
         api = FedDTGArjunAPI(dataset, device, args, generator, client_models)

@@ -57,7 +57,8 @@ if __name__ == "__main__":
         client_models.append((model, entry['freq']))
         client_num += entry['freq']
 
-    assert args.client_num_in_total == client_num
+    if args.dataset in ['cifar10', 'cifar100', 'mnist']:
+        assert args.client_num_in_total == client_num
 
     # model = create_model(args, model_name=args.model, output_dim=dataset[7])
     # model_trainer = custom_model_trainer(args, model)

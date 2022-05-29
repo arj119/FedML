@@ -59,8 +59,8 @@ class FedDTGExperiment(ExperimentBase):
             client_models.append((model, entry['freq']))
             client_num += entry['freq']
 
-        assert args.client_num_in_total == client_num
-        logging.info(client_models)
+        if args.dataset in ['cifar10', 'cifar100', 'mnist']:
+            assert args.client_num_in_total == client_num
 
         api = FedDTGAPI(dataset, device, args, generator, discriminator, client_models)
         api.train()
