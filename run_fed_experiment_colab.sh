@@ -16,6 +16,8 @@ COMM_ROUNDS=$8
 EPOCHS=$9
 EXPERIMENT_ID=${10}
 EXPERIMENT_REPETITIONS=${11}
+CLIENT_NUM_IN_TOTAL=${12}
+CLIENT_NUM_PER_ROUND=${13}
 
 # 1. MNIST standalone FedAvg
 cd ./fedml_experiments/standalone/"$ALGORITHM"
@@ -33,4 +35,5 @@ python3 "./main_$ALGORITHM.py" \
 --experiment_id "$EXPERIMENT_ID" \
 --experiment_repetitions "$EXPERIMENT_REPETITIONS" \
 --epochs "$EPOCHS" \
-
+--client_num_in_total "$CLIENT_NUM_IN_TOTAL"\
+--client_num_per_round "$CLIENT_NUM_PER_ROUND"\
