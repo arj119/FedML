@@ -45,12 +45,14 @@ class HeterogeneousModelBaseTrainerAPI(ABC):
         pass
 
     def _client_sampling(self, round_idx):
-        if self.args.client_num_in_total == self.args.client_num_per_round:
-            client_indices = [client_index for client_index in range(self.args.client_num_in_total)]
+        clients_num_in_total = len(self.client_list)
+
+        if clients_num_in_total == self.args.client_num_per_round:
+            client_indices = [client_index for client_index in range(clients_num_in_total)]
         else:
-            num_clients = min(self.args.client_num_per_round, self.args.client_num_in_total)
+            num_clients = min(self.args.client_num_per_round, clients_num_in_total)
             np.random.seed(round_idx)  # make sure for each comparison, we are selecting the same clients each round
-            client_indices = np.random.choice(range(self.args.client_num_in_total), num_clients, replace=False)
+            client_indices = np.random.choice(range(clients_num_in_total), num_clients, replace=False)
         logging.info("client_indices = %s" % str(client_indices))
         return [self.client_list[i] for i in client_indices]
 
