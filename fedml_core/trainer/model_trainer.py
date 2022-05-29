@@ -43,10 +43,12 @@ class ModelTrainer(ABC):
         if optimiser_name == "sgd":
             optimiser = torch.optim.SGD(model.parameters(), lr=lr)
         else:
+            beta1, beta2 = 0.5, 0.999
             optimiser = torch.optim.Adam(model.parameters(),
                                          lr=lr,
                                          eps=1e-08,
                                          weight_decay=1e-2,
                                          amsgrad=True,
+                                         betas=(beta1, beta2)
                                          )
         return optimiser

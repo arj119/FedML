@@ -5,6 +5,7 @@ from abc import ABC, abstractmethod
 import numpy as np
 import torch
 import wandb
+from torch.utils.data import DataLoader, Subset
 
 from fedml_api.standalone.utils.BaseClient import BaseClient
 from fedml_api.standalone.utils.plot import plot_label_distributions
@@ -53,12 +54,11 @@ class HeterogeneousModelBaseTrainerAPI(ABC):
         logging.info("client_indices = %s" % str(client_indices))
         return [self.client_list[i] for i in client_indices]
 
-    def _generate_validation_set(self, num_samples=10000):
-        test_data_num = len(self.test_global.dataset)
-        sample_indices = random.sample(range(test_data_num), min(num_samples, test_data_num))
-        subset = torch.utils.data.Subset(self.test_global.dataset, sample_indices)
-        sample_testset = torch.utils.data.DataLoader(subset, batch_size=self.args.batch_size)
-        self.val_global = sample_testset
+    def _generate_train_subset(self, num_samples=10000):
+        train_data_num = len(self.train_global.dataset)
+        sample_indices = random.sample(range(train_data_num), min(num_samples, train_data_num))
+        subset = Subset(self.train_global.dataset, sample_indices)
+        return DataLoader(subset, batch_size=self.args.batch_size)
 
     def _aggregate(self, w_locals):
         training_num = 0
