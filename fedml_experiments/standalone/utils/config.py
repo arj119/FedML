@@ -22,6 +22,9 @@ def create_argparser(parser):
     parser.add_argument('--partition_alpha', type=float, default=0.1, metavar='PA',
                         help='partition alpha (default: 0.5)')
 
+    parser.add_argument('--partition_seed', type=int, default=1, metavar='PS',
+                        help='partition seed (default: 1)')
+
     parser.add_argument('--batch_size', type=int, default=32, metavar='N',
                         help='input batch size for training (default: 64)')
 
@@ -55,6 +58,8 @@ def create_argparser(parser):
                         help='CI')
 
     parser.add_argument('--experiment_id', type=str, default='', help='Id to group experiments by')
+
+    parser.add_argument('--experiment_repetitions', type=int, default=1, help='Number of repeats to perform the experiment')
 
     return parser
 

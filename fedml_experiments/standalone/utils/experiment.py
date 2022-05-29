@@ -26,8 +26,12 @@ class ExperimentBase(ABC):
     def start(self):
         args = self._load_args()
         group_id = f'{args.dataset}_alpha={args.partition_alpha}_r={args.dataset_r}_{args.experiment_id}'
-        for i in range(self.num_repetitions):
-            args, device, dataset = self._setup(args, seed=i, group_id=group_id)
+        for i in range(args.experiment_repetitions):
+            if args.experiment_repetitions == 1:
+                dataset = self._load_dataset(args, args.partition_seed)
+                args, device = self._setup(args, seed=args.partition_seed, group_id=group_id, load_dataset=False)
+            else:
+                args, device, dataset = self._setup(args, seed=i, group_id=group_id)
             client_model_config = parse_config(args.client_config_file)
             self.experiment_start(client_model_config, args, device, dataset)
             wandb.finish()
@@ -48,7 +52,7 @@ class ExperimentBase(ABC):
 
         return args
 
-    def _setup(self, args, seed, group_id=None):
+    def _setup(self, args, seed, group_id=None, load_dataset=True):
         device = torch.device("cuda:" + str(args.gpu) if torch.cuda.is_available() else "cpu")
         logging.info(device)
 
@@ -70,6 +74,16 @@ class ExperimentBase(ABC):
         torch.backends.cudnn.deterministic = True
 
         # load data
-        dataset = load_data(args, args.dataset)
+        if load_dataset:
+            dataset = load_data(args, args.dataset)
+            return args, device, dataset
+        else:
+            return args, device
 
-        return args, device, dataset
+    def _load_dataset(self, args, seed):
+        random.seed(seed)
+        np.random.seed(seed)
+        torch.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)
+        torch.backends.cudnn.deterministic = True
+        return load_data(args, args.dataset)

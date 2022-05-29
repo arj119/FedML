@@ -21,10 +21,12 @@ DATASET=$2
 DATASET_DIR="./../../../data/$3"
 PARTITION_METHOD=$4
 PARTITION_ALPHA=$5
-DATASET_SAMPLE_R=$6
-COMM_ROUNDS=$7
-EPOCHS=$8
-EXPERIMENT_ID=$9
+PARTITION_SEED=$6
+DATASET_SAMPLE_R=$7
+COMM_ROUNDS=$8
+EPOCHS=$9
+EXPERIMENT_ID=${10}
+EXPERIMENT_REPETITIONS=${11}
 
 # 1. MNIST standalone FedAvg
 cd ./fedml_experiments/standalone/"$ALGORITHM"
@@ -37,6 +39,9 @@ python3 "./main_$ALGORITHM.py" \
 --dataset_r "$DATASET_SAMPLE_R" \
 --partition_method "$PARTITION_METHOD" \
 --partition_alpha "$PARTITION_ALPHA" \
---comm_round $COMM_ROUNDS \
---experiment_id $EXPERIMENT_ID \
---epochs $EPOCHS
+--partition_seed "$PARTITION_SEED" \
+--comm_round "$COMM_ROUNDS" \
+--experiment_id "$EXPERIMENT_ID" \
+--experiment_repetitions "$EXPERIMENT_REPETITIONS" \
+--epochs "$EPOCHS" \
+
