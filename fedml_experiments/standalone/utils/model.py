@@ -15,8 +15,11 @@ cv_model_builders = {
     'cnn_large': CNNLarge,
 }
 
-cv_datasets = {'mnist': 1, 'femnist': 1, 'fed_cifar100': 3, 'cinic10': 3, 'cifar10': 3, 'cifar100': 3}
-cv_datasets_image_size = {'mnist': [1, 32, 32], 'femnist': [1, 28, 28], 'fed_cifar100': [3, 24, 24], 'cinic10': [3, 32, 32], 'cifar10': [3, 32, 32], 'cifar100': [3, 32, 32]}
+cv_datasets = {'mnist': 1, 'femnist': 1, 'fed_cifar100': 3, 'cinic10': 3, 'cifar10': 3, 'cifar100': 3, 'emnist': 1}
+cv_datasets_image_size = {'mnist': [1, 32, 32], 'emnist': [1, 32, 32], 'femnist': [1, 28, 28],
+                          'fed_cifar100': [3, 24, 24], 'cinic10': [3, 32, 32], 'cifar10': [3, 32, 32],
+                          'cifar100': [3, 32, 32]}
+
 
 def create_model(args, model_name, output_dim):
     logging.info("create_model. model_name = %s, output_dim = %s" % (model_name, output_dim))
@@ -49,7 +52,9 @@ def create_model(args, model_name, output_dim):
     elif model_name == 'generator':
         model = ImageGenerator(args.nz, args.ngf, nc=cv_datasets[args.dataset], img_size=32)
     elif model_name == 'conditional_generator':
-        model = ConditionalImageGenerator(num_classes=output_dim, nz=args.nz, ngf=args.ngf, nc=cv_datasets[args.dataset], img_size=32)
+        model = ConditionalImageGenerator(num_classes=output_dim, nz=args.nz, ngf=args.ngf,
+                                          nc=cv_datasets[args.dataset], img_size=32)
     elif args.dataset in cv_datasets:
-        model = cv_model_builders[model_name](cv_datasets[args.dataset], output_dim, cv_datasets_image_size[args.dataset])
+        model = cv_model_builders[model_name](cv_datasets[args.dataset], output_dim,
+                                              cv_datasets_image_size[args.dataset])
     return model

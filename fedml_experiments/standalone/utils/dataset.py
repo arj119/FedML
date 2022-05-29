@@ -4,6 +4,7 @@ import os
 import numpy as np
 import torch
 
+from fedml_api.data_preprocessing.EMNIST.data_loader import load_partition_data_emnist
 from fedml_api.data_preprocessing.MNIST.data_loader_better import load_partition_data_mnist_better
 from fedml_api.data_preprocessing.cifar10.data_loader import load_partition_data_cifar10
 from fedml_api.data_preprocessing.cifar100.data_loader import load_partition_data_cifar100
@@ -136,6 +137,8 @@ def load_data(args, dataset_name):
             data_loader = load_partition_data_cinic10
         elif dataset_name == "mnist":
             data_loader = load_partition_data_mnist_better
+        elif dataset_name == "emnist":
+            data_loader = load_partition_data_emnist
         else:
             data_loader = load_partition_data_cifar10
         train_data_num, test_data_num, train_data_global, test_data_global, \
