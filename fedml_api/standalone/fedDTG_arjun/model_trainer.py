@@ -142,7 +142,7 @@ class FedDTGArjunModelTrainer(ACGANModelTrainer):
         classifier = self.local_model.to(device)
         classifier.train()
 
-        kd_criterion_logits = SoftTarget(T=4).to(device)
+        kd_criterion_logits = SoftTarget(T=1).to(device)
         cls_criterion = nn.CrossEntropyLoss().to(device)
 
         kd_alpha = args.kd_alpha

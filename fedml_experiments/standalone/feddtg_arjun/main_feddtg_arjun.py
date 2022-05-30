@@ -34,10 +34,10 @@ class FedDTGArjunExperiment(ExperimentBase):
                             default=100,
                             help='Number of generator features')
 
-        parser.add_argument('--kd_alpha', type=float, default=0.8,
+        parser.add_argument('--kd_alpha', type=float, default=0.7,
                             help='Weighting of knowledge distillation regularisation term')
 
-        parser.add_argument('--gen_lr', type=float, default=0.001,
+        parser.add_argument('--gen_lr', type=float, default=0.02,
                             help='Learning rate of generator')
 
         parser.add_argument('--gen_optimizer', type=str, default='adam',
