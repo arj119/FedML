@@ -113,10 +113,12 @@ class FedDTGArjunAPI(HeterogeneousModelBaseTrainerAPI):
             distillation_dataset = DataLoader(TensorDataset(synth_data, labels), batch_size=self.args.batch_size)
 
             local_logits = []
+            local_validity = []
             logging.info("########## Acquiring distillation logits... #########")
             for client in client_subset:
-                logits = client.get_distillation_logits(copy.deepcopy(w_global), distillation_dataset)
+                logits, validity = client.get_distillation_logits(copy.deepcopy(w_global), distillation_dataset)
                 local_logits.append(logits)
+                local_validity.append(validity)
                 logging.info(f"Client {client.client_idx} complete")
 
             # Calculate average soft labels
@@ -125,7 +127,9 @@ class FedDTGArjunAPI(HeterogeneousModelBaseTrainerAPI):
                 # Calculate teacher logits for client
                 logging.info(f"##### Client {client.client_idx} #####")
                 consensus_logits = torch.mean(torch.stack(local_logits[:idx] + local_logits[idx + 1:]), dim=0)
-                consensus_outputs = DataLoader(TensorDataset(consensus_logits),
+                consensus_validity = torch.mean(torch.stack(local_validity[:idx] + local_validity[idx + 1:]), dim=0)
+
+                consensus_outputs = DataLoader(TensorDataset(consensus_logits, consensus_validity),
                                                batch_size=self.args.batch_size)
 
                 client.classifier_knowledge_distillation(consensus_outputs, distillation_dataset)
