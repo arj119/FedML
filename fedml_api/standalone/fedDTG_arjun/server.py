@@ -54,7 +54,7 @@ class FedDTGArjunAPI(HeterogeneousModelBaseTrainerAPI):
         c_idx = 0
         for local_model, freq in client_models:
             for i in range(freq):
-                model_trainer = FedDTGArjunModelTrainer(
+                model_trainer = ACGANModelTrainer(
                     copy.deepcopy(self.generator.model),
                     copy.deepcopy(local_model)
                 )
@@ -139,7 +139,7 @@ class FedDTGArjunAPI(HeterogeneousModelBaseTrainerAPI):
                 #                                          images_fake=distillation_dataset, device=self.device)
                 # logging.info(f'FID Score: {fid_score}')
                 # wandb.log({'FID Score': fid_score, 'Round': round_idx})
-                logging.info("########## Calculating FID Score... Complete #########")
+                # logging.info("########## Calculating FID Score... Complete #########")
 
             # test results
             # at last round

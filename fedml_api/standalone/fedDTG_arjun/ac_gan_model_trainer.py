@@ -52,7 +52,7 @@ class ACGANModelTrainer(ModelTrainer):
                       optimiser_D, device):
         generator.train()
         discriminator.train()
-        real_label, fake_label = 1, 0  # Soft labels
+        real_label, fake_label = 0.9, 0  # Soft labels
 
         # Initialize BCELoss function
         adversarial_loss = nn.BCELoss().to(device)
@@ -163,21 +163,11 @@ class ACGANModelTrainer(ModelTrainer):
         kd_criterion_logits = SoftTarget(T=4).to(device)
         kd_criterion_validity = nn.MSELoss().to(device)
         cls_criterion = nn.CrossEntropyLoss().to(device)
+        adv_criterion = nn.BCELoss().to(device)
 
         kd_alpha = args.kd_alpha
 
-        if args.client_optimizer == "sgd":
-            optimiser_D = torch.optim.SGD(self.local_model.parameters(), lr=args.lr)
-
-
-        else:
-            beta1, beta2 = 0.5, 0.999
-            optimiser_D = torch.optim.Adam(filter(lambda p: p.requires_grad, self.local_model.parameters()),
-                                           lr=args.lr,
-                                           weight_decay=args.wd,
-                                           amsgrad=True,
-                                           betas=(beta1, beta2)
-                                           )
+        optimiserC = self.get_client_optimiser(classifier, args.client_optimizer, args.lr)
 
         epoch_dist_loss = []
         for epoch in range(args.kd_epochs):
@@ -187,14 +177,19 @@ class ACGANModelTrainer(ModelTrainer):
                 synth_data, labels, t_logits, t_validity = synth_data.to(device), labels.to(device), t_logits.to(
                     device), t_validity.to(device)
 
-                optimiser_D.zero_grad()
+                b_size = synth_data.size(0)
+                label_fake_adv = torch.full((b_size, 1), fake_label, device=device,
+                                            requires_grad=False, dtype=torch.float)
+
+                optimiserC.zero_grad()
 
                 cls_logits, validity = classifier(synth_data, discriminator=True)
 
                 kd_loss = (kd_criterion_logits(cls_logits, t_logits) + kd_criterion_validity(validity, t_validity)) / 2
-                diss_loss = (1 - kd_alpha) * cls_criterion(cls_logits, labels) + kd_alpha * kd_loss
+                task_loss = (cls_criterion(cls_logits, labels) + adv_criterion(validity, label_fake_adv)) / 2
+                diss_loss = (1 - kd_alpha) * task_loss + kd_alpha * kd_loss
                 diss_loss.backward()
-                optimiser_D.step()
+                optimiserC.step()
 
                 batch_dist_loss.append(diss_loss.item())
 
