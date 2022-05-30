@@ -69,10 +69,10 @@ class FedDTGArjunModelTrainer(ACGANModelTrainer):
                 # 2. on the generated data
                 cls_logits_fake = discriminator(gen_imgs.detach())  # detach() because we are not training G here
                 logz_fake = torch.logsumexp(cls_logits_fake, dim=-1)
-                prob_label_fake = torch.gather(cls_logits_fake, 1, gen_labels.unsqueeze(-1))
-                aux_loss_fake = -torch.mean(prob_label_fake) + torch.mean(logz_fake)
+                # prob_label_fake = torch.gather(cls_logits_fake, 1, gen_labels.unsqueeze(-1))
+                # aux_loss_fake = -torch.mean(prob_label_fake) + torch.mean(logz_fake)
                 adv_loss_fake = torch.mean(F.softplus(logz_fake))
-                d_real_loss = 0.5 * (aux_loss_fake + adv_loss_fake)
+                d_real_loss = adv_loss_fake
 
                 # 3. on labeled data
                 # 1. on Unlabelled data
@@ -84,17 +84,6 @@ class FedDTGArjunModelTrainer(ACGANModelTrainer):
                 d_fake_loss = 0.5 * (aux_loss_real + adv_loss_real)
 
                 errD = d_real_loss + d_fake_loss
-
-                # Loss for real images
-                # cls_logits_real = discriminator(real)
-                # gan_logits_real = torch.logsumexp(cls_logits_real, dim=-1)
-                # d_real_loss = (auxiliary_loss(cls_logits_real, labels) + torch.mean(gan_logits_real)) / 2
-                #
-                # Loss for fake images
-                # cls_logits_fake = discriminator(gen_imgs.detach())  # detach() because we are not training G here
-                # gan_logits_fake = torch.logsumexp(cls_logits_fake, dim=-1)
-                # d_fake_loss = (torch.mean(F.softplus(gan_logits_fake)) + auxiliary_loss(cls_logits_fake,
-                # gen_labels)) / 2
 
                 # Total discriminator loss
                 # errD = (d_real_loss + d_fake_loss) / 2
