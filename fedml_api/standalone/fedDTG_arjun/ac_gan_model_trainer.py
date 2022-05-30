@@ -168,7 +168,7 @@ class ACGANModelTrainer(ModelTrainer):
         kd_alpha = args.kd_alpha
 
         optimiserC = self.get_client_optimiser(classifier, args.client_optimizer, args.lr)
-
+        fake_label = 0
         epoch_dist_loss = []
         for epoch in range(args.kd_epochs):
             batch_dist_loss = []
