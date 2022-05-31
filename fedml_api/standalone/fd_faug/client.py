@@ -5,9 +5,9 @@ from fedml_api.standalone.utils.BaseClient import BaseClient
 
 
 class Client(BaseClient):
-    def __init__(self, client_idx, local_training_data, local_test_data, local_sample_number, args, device,
+    def __init__(self, client_idx, local_training_data, local_test_data, local_sample_number, global_test_data, args, device,
                  model_trainer: FDFAugModelTrainer):
-        super().__init__(client_idx, local_training_data, local_test_data, local_sample_number, args, device,
+        super().__init__(client_idx, local_training_data, local_test_data, local_sample_number, global_test_data, args, device,
                          model_trainer)
 
         self.global_label_logits = None

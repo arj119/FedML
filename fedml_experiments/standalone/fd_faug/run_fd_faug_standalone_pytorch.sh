@@ -28,7 +28,7 @@ KD_GAMMA=${13}
 
 CLIENT_CONFIG_FILE=${14}
 
-python3 ./main_fd_fAug.py \
+python3 ./main_fd_faug.py \
 --gpu $GPU \
 --dataset $DATASET \
 --data_dir $DATA_PATH \

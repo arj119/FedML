@@ -1,5 +1,5 @@
 {
-  "adapter_model": "cnn_small",
+  "adapter_model": "cnn_medium",
   "client_models": [
     {
       "model": "cnn_medium",

@@ -16,35 +16,6 @@ class FDFAugModelTrainer(ModelTrainer):
     def set_model_params(self, model_parameters):
         self.model.load_state_dict(model_parameters)
 
-    def pre_train(self, public_data, private_data, device, args):
-        """
-        Pre-training in FedMD algorithm to do transfer learning from public data set
-        to private dataset
-
-        Args:
-            public_data: Public data shared by all clients to perform KD on
-            private_data: Private data only known to the client
-            device: Device to perform training on
-            args: Other args
-
-        Returns:
-
-        """
-        model = self.model
-        model.to(device)
-
-        # train and update
-        criterion = nn.CrossEntropyLoss().to(device)
-
-        optimizer = self.get_client_optimiser(model, args.client_optimizer, args.lr)
-
-        # Train on public dataset
-        self._train_loop(model, train_data=public_data, criterion=criterion, epochs=args.pretrain_epochs_public,
-                         optimizer=optimizer, device=device)
-        # Transfer learning to private dataset
-        self._train_loop(model, train_data=private_data, criterion=criterion, epochs=args.pretrain_epochs_private,
-                         optimizer=optimizer, device=device)
-
     def train(self, train_data, global_average_label_logits: dict, device, args):
         """
 

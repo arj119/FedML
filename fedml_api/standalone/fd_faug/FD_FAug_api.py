@@ -32,12 +32,15 @@ class FDFAugAPI(HeterogeneousModelBaseTrainerAPI):
                        client_models):
         logging.info("############setup_clients (START)#############")
 
-        for client_idx, (model, freq) in enumerate(client_models):
+        c_idx = 0
+        for local_model, freq in client_models:
             for i in range(freq):
-                model_trainer = FDFAugModelTrainer(model)
-                c = Client(client_idx, train_data_local_dict[client_idx], test_data_local_dict[client_idx],
-                           train_data_local_num_dict[client_idx], self.args, self.device, model_trainer)
+                model_trainer = FDFAugModelTrainer(copy.deepcopy(local_model))
+                c = Client(c_idx, train_data_local_dict[c_idx], test_data_local_dict[c_idx],
+                           train_data_local_num_dict[c_idx], self.test_global, self.args, self.device,
+                           model_trainer)
                 self.client_list.append(c)
+                c_idx += 1
 
         logging.info("############setup_clients (END)#############")
 
@@ -59,6 +62,7 @@ class FDFAugAPI(HeterogeneousModelBaseTrainerAPI):
             for client in client_subset:
                 # Communication: Each party computes the class scores on the public dataset, and transmits the result
                 # to a central server
+                logging.info(f'### Training Client {client.client_idx}')
                 client_label_average_logits: dict = client.train()
                 # logging.info(f'Retrieving client {idx} logits: {client_label_average_logits}')
 
@@ -72,10 +76,11 @@ class FDFAugAPI(HeterogeneousModelBaseTrainerAPI):
 
             for client in client_subset:
                 # Send ensemble logit vector back to client
+                logging.info(f'### Sending to Client {client.client_idx}')
                 new_client_label_average_logits = dict()
                 for label, sum_logits in global_label_logits.items():
-                    new_client_label_average_logits[label] = (sum_logits - local_logit_dict[client.client_idx][
-                        label]) / (M - 1)
+                    new_client_label_average_logits[label] = (sum_logits - local_logit_dict[client.client_idx].get(
+                        label, torch.zeros_like(sum_logits))) / (M - 1)
 
                 # Return updated global logits back to client
                 logging.info(f'Sent to client: {client.client_idx}')
