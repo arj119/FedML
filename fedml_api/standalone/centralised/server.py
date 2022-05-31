@@ -36,19 +36,16 @@ class CentralisedAPI(HeterogeneousModelBaseTrainerAPI):
     def _setup_clients(self, train_data_local_num_dict, train_data_local_dict, test_data_local_dict,
                        client_models):
         logging.info("############setup_clients (START)#############")
-        c_idx = 0
-        for local_model, freq in client_models:
-            for i in range(freq):
-                model_trainer = CentralisedModelTrainer(
-                    copy.deepcopy(local_model),
-                    self.args)
+        for c_idx, (local_model, _) in enumerate(client_models):
+            model_trainer = CentralisedModelTrainer(
+                local_model,
+                self.args)
 
-                c = CentralisedClient(c_idx, self.centralised_data, test_data_local_dict[c_idx],
-                                      len(self.centralised_data),
-                                      self.test_global, self.args, self.device,
-                                      model_trainer)
-                c_idx += 1
-                self.client_list.append(c)
+            c = CentralisedClient(c_idx, self.centralised_data, test_data_local_dict[c_idx],
+                                  len(self.centralised_data),
+                                  self.test_global, self.args, self.device,
+                                  model_trainer)
+            self.client_list.append(c)
         logging.info("############setup_clients (END)#############")
 
     def train(self):
