@@ -8,7 +8,6 @@ from torch.utils.data import DataLoader, TensorDataset
 from torchvision.utils import make_grid
 import torchvision.transforms as tfs
 
-from FID.FIDScorer import FIDScorer
 from fedml_api.standalone.fedDTG_arjun.ac_gan_model_trainer import ACGANModelTrainer
 from fedml_api.standalone.fedDTG_arjun.client import FedDTGArjunClient
 from fedml_api.standalone.fedDTG_arjun.model_trainer import FedDTGArjunModelTrainer
@@ -33,9 +32,9 @@ class FedDTGArjunAPI(HeterogeneousModelBaseTrainerAPI):
         self.generator_model = self.generator.generator
         # For logging GAN progress
         self.fixed_labels = self.generator_model.generate_balanced_labels(
-            self.generator_model.num_classes,
+            self.generator_model.num_classes * 8,
             device='cpu')
-        self.fixed_noise = self.generator_model.generate_noise_vector(self.generator_model.num_classes,
+        self.fixed_noise = self.generator_model.generate_noise_vector(self.generator_model.num_classes * 8,
                                                                       device='cpu')
 
         self._setup_clients(self.train_data_local_num_dict, self.train_data_local_dict, self.test_data_local_dict,
