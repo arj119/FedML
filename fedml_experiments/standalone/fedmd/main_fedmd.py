@@ -46,8 +46,7 @@ class FedMDExperiment(ExperimentBase):
                                  '[(client_model, freq)]')
         return parser
 
-    def experiment_start(self, client_model_config, args, device, dataset):
-        client_models = create_local_models_from_config(client_model_config, args, dataset)
+    def experiment_start(self, client_model_config, client_models, args, device, dataset):
         api = FedMDAPI(dataset, device, args, client_models)
         api.train()
 

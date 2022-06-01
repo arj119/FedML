@@ -1,4 +1,8 @@
 {
-  "model": "cnn_medium",
-  "client_num": 10
+  "client_models": [
+    {
+      "model": "cnn_medium",
+      "freq": 10
+    }
+  ]
 }

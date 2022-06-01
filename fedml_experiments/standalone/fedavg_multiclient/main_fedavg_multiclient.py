@@ -4,7 +4,7 @@ import os
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.getcwd(), "../../../")))
 
-from fedml_experiments.standalone.utils.model import create_model
+from fedml_experiments.standalone.utils.model import create_model, create_local_models_from_config
 from fedml_api.standalone.fedavg_multiclient.fedavgmulticlient_api import FedAvgMultiClientAPI
 from fedml_experiments.standalone.utils.experiment import ExperimentBase
 
@@ -26,15 +26,13 @@ class FedAvgMultiClientExperiment(ExperimentBase):
         return parser
 
     def experiment_start(self, client_model_config, args, device, dataset):
-        client_num = client_model_config['client_num']
-        assert args.client_num_in_total == client_num
-        model = create_model(args, model_name=client_model_config['model'], output_dim=dataset[7])
+        client_models = create_local_models_from_config(client_model_config, args, dataset)
 
-        # model = create_model(args, model_name=args.model, output_dim=dataset[7])
-        # model_trainer = custom_model_trainer(args, model)
-        logging.info(model)
+        assert len(
+            client_models) == 1, f'FedAvg can only work with a single shared model, you have provided {len(client_models)}'
 
-        api = FedAvgMultiClientAPI(dataset, device, args, model, client_num)
+        model, num_clients = client_models[0]
+        api = FedAvgMultiClientAPI(dataset, device, args, model, num_clients)
         api.train()
 
 

@@ -10,6 +10,7 @@ import numpy as np
 
 from fedml_experiments.standalone.utils.config import parse_config, create_argparser
 from fedml_experiments.standalone.utils.dataset import load_data
+from fedml_experiments.standalone.utils.model import create_local_models_from_config
 
 
 class ExperimentBase(ABC):
@@ -33,7 +34,8 @@ class ExperimentBase(ABC):
             else:
                 args, device, dataset = self._setup(args, seed=i, group_id=group_id)
             client_model_config = parse_config(args.client_config_file)
-            self.experiment_start(client_model_config, args, device, dataset)
+            client_models = create_local_models_from_config(client_model_config, args, dataset)
+            self.experiment_start(client_model_config, client_models, args, device, dataset)
             wandb.finish()
 
     @abstractmethod
@@ -41,7 +43,7 @@ class ExperimentBase(ABC):
         pass
 
     @abstractmethod
-    def experiment_start(self, client_model_config, args, device, dataset):
+    def experiment_start(self, client_model_config, client_models, args, device, dataset):
         pass
 
     def _load_args(self):

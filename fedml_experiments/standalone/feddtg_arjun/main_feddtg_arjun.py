@@ -48,9 +48,8 @@ class FedDTGArjunExperiment(ExperimentBase):
 
         return parser
 
-    def experiment_start(self, client_model_config, args, device, dataset):
+    def experiment_start(self, client_model_config, client_models, args, device, dataset):
         generator = create_model(args, model_name=client_model_config['generator'], output_dim=dataset[7])
-        client_models = create_local_models_from_config(client_model_config, args, dataset)
         api = FedDTGArjunAPI(dataset, device, args, generator, client_models)
         api.train()
 
