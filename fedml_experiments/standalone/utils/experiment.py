@@ -27,13 +27,13 @@ class ExperimentBase(ABC):
     def start(self):
         args = self._load_args()
         group_id = f'{args.dataset}_alpha={args.partition_alpha}_r={args.dataset_r}_{args.experiment_id}'
+        client_model_config = parse_config(args.client_config_file)
         for i in range(args.experiment_repetitions):
             if args.experiment_repetitions == 1:
                 dataset = self._load_dataset(args, args.partition_seed)
                 args, device = self._setup(args, seed=args.partition_seed, group_id=group_id, load_dataset=False)
             else:
                 args, device, dataset = self._setup(args, seed=i, group_id=group_id)
-            client_model_config = parse_config(args.client_config_file)
             client_models = create_local_models_from_config(client_model_config, args, dataset)
             self.experiment_start(client_model_config, client_models, args, device, dataset)
             wandb.finish()

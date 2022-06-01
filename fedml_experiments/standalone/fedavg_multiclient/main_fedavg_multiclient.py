@@ -25,7 +25,7 @@ class FedAvgMultiClientExperiment(ExperimentBase):
 
         return parser
 
-    def experiment_start(self, client_model_config, args, device, dataset):
+    def experiment_start(self, client_model_config, client_models, args, device, dataset):
         client_models = create_local_models_from_config(client_model_config, args, dataset)
 
         assert len(

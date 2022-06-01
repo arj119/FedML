@@ -1,0 +1,95 @@
+{
+  "client_models": [
+    {
+      "model": "cnn_custom",
+      "freq": 1,
+      "layers": [
+        16,
+        32
+      ]
+    },
+    {
+      "model": "cnn_custom",
+      "freq": 1,
+      "layers": [
+        16,
+        32,
+        16
+      ]
+    },
+    {
+      "model": "cnn_custom",
+      "freq": 1,
+      "layers": [
+        8,
+        16,
+        16
+      ]
+    },
+    {
+      "model": "cnn_custom",
+      "freq": 1,
+      "layers": [
+        8,
+        8,
+        8
+      ]
+    },
+    {
+      "model": "cnn_custom",
+      "freq": 1,
+      "layers": [
+        32,
+        64,
+        64
+      ]
+    },
+    {
+      "model": "cnn_custom",
+      "freq": 1,
+      "layers": [
+        32,
+        32,
+        32
+      ]
+    },
+    {
+      "model": "cnn_custom",
+      "freq": 1,
+      "layers": [
+        16,
+        16
+      ]
+    },
+    {
+      "model": "cnn_custom",
+      "freq": 1,
+      "layers": [
+        32,
+        32
+      ]
+    },
+    {
+      "model": "cnn_custom",
+      "freq": 1,
+      "layers": [
+        16,
+        16,
+        16,
+        16
+      ]
+    },
+    {
+      "model": "cnn_custom",
+      "freq": 1,
+      "layers": [
+        16,
+        32,
+        64,
+        32
+      ]
+    }
+  ],
+  "generator": "conditional_generator",
+  "discriminator": "cnn_medium"
+}
