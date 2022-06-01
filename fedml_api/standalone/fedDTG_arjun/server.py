@@ -67,8 +67,10 @@ class FedDTGArjunAPI(HeterogeneousModelBaseTrainerAPI):
 
     def train(self):
         w_global = self.generator.get_model_params()
-        class_labels = list(range(self.class_num))
-        noise_size = 10000
+        DISTILLATION_DATASET_SIZE = 10000
+        distillation_dataset = None
+        teacher_logits = None
+        prev_client_subset = None
 
         for round_idx in range(self.args.comm_round):
 
@@ -85,7 +87,14 @@ class FedDTGArjunAPI(HeterogeneousModelBaseTrainerAPI):
 
             client: FedDTGArjunClient
             for client in client_subset:
-                # Local round
+                # Perform knowledge distillation (model drift correction) on current participating clients
+                if prev_client_subset is not None and client.client_idx not in prev_client_subset:
+                    logging.info(f"######## KD for new client {client.client_idx} ########")
+                    assert distillation_dataset is not None and teacher_logits is not None, 'Need both to perform KD'
+                    # Calculate teacher logits as mean of logits belonging to other clients
+                    client.classifier_knowledge_distillation(teacher_logits, distillation_dataset)
+
+                # Perform local training as usual
                 w_local = client.train(copy.deepcopy(w_global), round_idx)
 
                 w_locals.append(w_local)
@@ -102,8 +111,8 @@ class FedDTGArjunAPI(HeterogeneousModelBaseTrainerAPI):
             logging.info('########## Distillation ########')
 
             # Creating distillation dataset here to save memory but same as if sending noise vector to clients
-            noise_vector = self.generator_model.generate_noise_vector(noise_size, device=self.device)
-            labels = self.generator_model.generate_balanced_labels(noise_size, device=self.device)
+            noise_vector = self.generator_model.generate_noise_vector(DISTILLATION_DATASET_SIZE, device=self.device)
+            labels = self.generator_model.generate_balanced_labels(DISTILLATION_DATASET_SIZE, device=self.device)
             noise_labels = TensorDataset(noise_vector, labels)
             noise_labels_loader = DataLoader(noise_labels, batch_size=self.args.batch_size)
 
@@ -123,11 +132,15 @@ class FedDTGArjunAPI(HeterogeneousModelBaseTrainerAPI):
             for idx, client in enumerate(client_subset):
                 # Calculate teacher logits for client
                 logging.info(f"##### Client {client.client_idx} #####")
-                consensus_logits = torch.mean(torch.stack(local_logits[:idx] + local_logits[idx + 1:]), dim=0)
-                consensus_outputs = DataLoader(TensorDataset(consensus_logits),
-                                               batch_size=self.args.batch_size)
+                teacher_logits = torch.mean(torch.stack(local_logits[:idx] + local_logits[idx + 1:]), dim=0)
+                teacher_logits = DataLoader(TensorDataset(teacher_logits), batch_size=self.args.batch_size)
 
-                client.classifier_knowledge_distillation(consensus_outputs, distillation_dataset)
+                client.classifier_knowledge_distillation(teacher_logits, distillation_dataset)
+
+            # For next round
+            teacher_logits = torch.mean(torch.stack(local_logits), dim=0)
+            teacher_logits = DataLoader(TensorDataset(teacher_logits), batch_size=self.args.batch_size)
+            prev_client_subset = {c.client_idx for c in client_subset}
 
             if round_idx % 1 == 0:
                 logging.info("########## Logging generator images... #########")
