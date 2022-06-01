@@ -4,7 +4,7 @@ import os
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.getcwd(), "../../../")))
 
-from fedml_experiments.standalone.utils.model import create_model
+from fedml_experiments.standalone.utils.model import create_model, create_local_models_from_config
 from fedml_api.standalone.fedDTG_arjun.server import FedDTGArjunAPI
 from fedml_experiments.standalone.utils.experiment import ExperimentBase
 
@@ -50,18 +50,7 @@ class FedDTGArjunExperiment(ExperimentBase):
 
     def experiment_start(self, client_model_config, args, device, dataset):
         generator = create_model(args, model_name=client_model_config['generator'], output_dim=dataset[7])
-        client_models = []
-        client_num = 0
-
-        for entry in client_model_config['client_models']:
-            model = create_model(args, model_name=entry['model'], output_dim=dataset[7])
-            client_models.append((model, entry['freq']))
-            client_num += entry['freq']
-
-        if args.dataset in ['cifar10', 'cifar100', 'mnist']:
-            assert args.client_num_in_total == client_num
-        logging.info(client_models)
-
+        client_models = create_local_models_from_config(client_model_config, args, dataset)
         api = FedDTGArjunAPI(dataset, device, args, generator, client_models)
         api.train()
 

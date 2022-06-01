@@ -4,7 +4,7 @@ import sys
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.getcwd(), "../../../")))
 
-from fedml_experiments.standalone.utils.model import create_model
+from fedml_experiments.standalone.utils.model import create_local_models_from_config
 from fedml_api.standalone.fd_faug.FD_FAug_api import FDFAugAPI
 from fedml_experiments.standalone.utils.experiment import ExperimentBase
 
@@ -28,18 +28,7 @@ class FDFAugExperiment(ExperimentBase):
         return parser
 
     def experiment_start(self, client_model_config, args, device, dataset):
-        client_models = []
-        client_num = 0
-        for entry in client_model_config['client_models']:
-            model = create_model(args, model_name=entry['model'], output_dim=dataset[7])
-            client_models.append((model, entry['freq']))
-            client_num += entry['freq']
-
-        if args.dataset in ['cifar10', 'cifar100', 'mnist']:
-            assert args.client_num_in_total == client_num
-
-        logging.info(client_models)
-
+        client_models = create_local_models_from_config(client_model_config, args, dataset)
         api = FDFAugAPI(dataset, device, args, client_models)
         api.train()
 

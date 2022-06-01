@@ -63,16 +63,21 @@ class CNNParameterised(torch.nn.Module):
             return self.classifier(x)
 
 
-def CNNSmall(in_channels, output_dim, input_dim):
-    return CNNParameterised(in_channels=in_channels, out_classes=output_dim, layers_shape=[8, 8], dropout=0.2,
+def CNNSmall(in_channels, output_dim, input_dim, layers=None):
+    return CNNParameterised(in_channels=in_channels, out_classes=output_dim, layers_shape=[8, 8], dropout=0.5,
                             input_dim=input_dim)
 
 
-def CNNMedium(in_channels, output_dim, input_dim):
-    return CNNParameterised(in_channels=in_channels, out_classes=output_dim, layers_shape=[8, 16, 16], dropout=0.3,
+def CNNMedium(in_channels, output_dim, input_dim, layers=None):
+    return CNNParameterised(in_channels=in_channels, out_classes=output_dim, layers_shape=[8, 16, 16], dropout=0.5,
                             input_dim=input_dim)
 
 
-def CNNLarge(in_channels, output_dim, input_dim):
+def CNNLarge(in_channels, output_dim, input_dim, layers=None):
     return CNNParameterised(in_channels=in_channels, out_classes=output_dim, layers_shape=[32, 32, 32],
-                            dropout=0.3, input_dim=input_dim)
+                            dropout=0.5, input_dim=input_dim)
+
+
+def CNNCustomLayers(in_channels, output_dim, input_dim, layers):
+    return CNNParameterised(in_channels=in_channels, out_classes=output_dim, layers_shape=layers,
+                            dropout=0.5, input_dim=input_dim)
