@@ -25,6 +25,9 @@ class FDFAugExperiment(ExperimentBase):
                             default='./config/config.json',
                             help='Path to client model configuration. Should be a json file with list of '
                                  '[(client_model, freq)]')
+
+        parser.add_argument('--share_percentage', type=float, default=0.05,
+                            help='Number of epochs to be carries out on private dataset in local training')
         return parser
 
     def experiment_start(self, client_model_config, client_models, args, device, dataset):

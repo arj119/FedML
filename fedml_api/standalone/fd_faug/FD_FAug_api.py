@@ -1,15 +1,16 @@
 import copy
 import logging
-import random
+from collections import Counter
 from typing import List, Tuple
 
-import numpy as np
 import torch
 import wandb
 
 from fedml_api.standalone.fd_faug.client import Client
 from fedml_api.standalone.fd_faug.model_trainer import FDFAugModelTrainer
+from fedml_api.standalone.fd_faug.utils.data_utils import AugmentDataset
 from fedml_api.standalone.utils.HeterogeneousModelBaseTrainerAPI import HeterogeneousModelBaseTrainerAPI
+from fedml_api.standalone.utils.plot import plot_label_distributions
 
 
 class FDFAugAPI(HeterogeneousModelBaseTrainerAPI):
@@ -25,6 +26,24 @@ class FDFAugAPI(HeterogeneousModelBaseTrainerAPI):
 
         self._setup_clients(self.train_data_local_num_dict, self.train_data_local_dict, self.test_data_local_dict,
                             client_models)
+
+        public_datasets = []
+        public_dataset_size = 0
+
+        logging.info('############ Creating public dataset ############')
+        c: Client
+        for c in self.client_list:
+            client_shared_data = c.share_data(args.share_percentage, args)
+            public_dataset_size += len(client_shared_data.dataset)
+            public_datasets.append(client_shared_data)
+
+        self.augmented_data = AugmentDataset(public_datasets)
+
+        for c in self.client_list:
+            c.augment_training_data(augment_data=self.augmented_data)
+
+        logging.info(f'Public dataset size = {public_dataset_size}')
+        logging.info('############ Creating public dataset(END) ############')
 
         self._plot_client_training_data_distribution()
 
@@ -64,7 +83,6 @@ class FDFAugAPI(HeterogeneousModelBaseTrainerAPI):
                 # to a central server
                 logging.info(f'### Training Client {client.client_idx}')
                 client_label_average_logits: dict = client.train()
-                # logging.info(f'Retrieving client {idx} logits: {client_label_average_logits}')
 
                 local_logit_dict[client.client_idx] = client_label_average_logits
 
@@ -96,3 +114,27 @@ class FDFAugAPI(HeterogeneousModelBaseTrainerAPI):
                     self._local_test_on_validation_set(round_idx)
                 else:
                     self._local_test_on_all_clients(round_idx)
+
+    def _plot_client_training_data_distribution(self):
+        columns = ['Client Idx', 'Sample Number', 'Training Dataset Size', 'Test Dataset Size']
+        table_data = [[c.client_idx, c.local_sample_number, c.get_dataset_size('train'), c.get_dataset_size('test')] for
+                      c in
+                      self.client_list]
+        wandb.log({'Client Dataset Size Distribution': wandb.Table(columns=columns, data=table_data)})
+
+        # Train
+        client_label_counts = [c.get_label_distribution(mode='train') for c in self.client_list]
+        client_training_label_count = {client_idx: label_count for client_idx, label_count in client_label_counts}
+
+        # Add public dataset
+        train_classes = list(torch.concat([label for _, label in self.augmented_data], dim=0).numpy())
+        client_training_label_count[-1] = dict(Counter(train_classes))
+
+        plot_label_distributions(client_training_label_count, self.class_num, alpha=self.args.partition_alpha,
+                                 dataset='Train')
+
+        # Test
+        client_label_counts = [c.get_label_distribution(mode='test') for c in self.client_list]
+        client_test_label_count = {client_idx: label_count for client_idx, label_count in client_label_counts}
+        plot_label_distributions(client_test_label_count, self.class_num, alpha=self.args.partition_alpha,
+                                 dataset='Test')
