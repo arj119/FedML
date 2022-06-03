@@ -10,7 +10,7 @@ from fedml_experiments.standalone.utils.experiment import ExperimentBase
 
 
 class FDFAugExperiment(ExperimentBase):
-    algorithm_name = 'FD_FAug'
+    algorithm_name = 'FD_FAug with Augmentation'
 
     def add_custom_args(self, parser):
         """
