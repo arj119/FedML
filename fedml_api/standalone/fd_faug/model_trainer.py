@@ -65,7 +65,7 @@ class FDFAugModelTrainer(ModelTrainer):
                     # Cross entropy loss with soft targets given by softmax function applied to global average logits per label
                     soft_targets = torch.softmax(global_average_logits_per_label, dim=1)
                     kd_loss = criterion(output, soft_targets)
-                    loss += args.kd_gamma * kd_loss
+                    loss = (1 - args.kd_gamma) * loss + args.kd_gamma * kd_loss
 
                 loss.backward()
 
