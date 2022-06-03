@@ -3,6 +3,7 @@ from scipy import linalg
 from FID.InceptionV3 import InceptionV3
 import numpy as np
 from torch.nn.functional import adaptive_avg_pool2d
+import torch
 
 
 class FIDScorer:
@@ -16,6 +17,13 @@ class FIDScorer:
 
         activations = []
         for (batch, _) in images:
+            if len(batch.shape) < 4:
+                batch = torch.unsqueeze(batch, 1)
+
+            if batch.size(1) == 1:
+                # greyscale
+                batch = batch.repeat(1, 3, 1, 1)
+
             batch = batch.to(device)
             pred = model(batch)[0]
 

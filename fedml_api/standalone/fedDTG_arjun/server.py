@@ -8,6 +8,7 @@ from torch.utils.data import DataLoader, TensorDataset
 from torchvision.utils import make_grid
 import torchvision.transforms as tfs
 
+from FID.FIDScorer import FIDScorer
 from fedml_api.standalone.fedDTG_arjun.ac_gan_model_trainer import ACGANModelTrainer
 from fedml_api.standalone.fedDTG_arjun.client import FedDTGArjunClient
 from fedml_api.standalone.fedDTG_arjun.model_trainer import FedDTGArjunModelTrainer
@@ -43,8 +44,8 @@ class FedDTGArjunAPI(HeterogeneousModelBaseTrainerAPI):
         self._plot_client_training_data_distribution()
 
         # Generate dataset that can be used to calculate FID score
-        # self.FID_source_set = self._generate_train_subset(num_samples=10000)
-        # self.FIDScorer = FIDScorer()
+        self.FID_source_set = self._generate_train_subset(num_samples=10000)
+        self.FIDScorer = FIDScorer()
 
     def _setup_clients(self, train_data_local_num_dict, train_data_local_dict, test_data_local_dict,
                        client_models):
@@ -146,11 +147,11 @@ class FedDTGArjunAPI(HeterogeneousModelBaseTrainerAPI):
                 logging.info("########## Logging generator images... #########")
                 self.log_gan_images(caption=f'Generator Output, communication round: {round_idx}', round_idx=round_idx)
                 logging.info("########## Logging generator images... Complete #########")
-                # logging.info("########## Calculating FID Score...  #########")
-                # fid_score = self.FIDScorer.calculate_fid(images_real=self.FID_source_set,
-                #                                          images_fake=distillation_dataset, device=self.device)
-                # logging.info(f'FID Score: {fid_score}')
-                # wandb.log({'FID Score': fid_score, 'Round': round_idx})
+                logging.info("########## Calculating FID Score...  #########")
+                fid_score = self.FIDScorer.calculate_fid(images_real=self.FID_source_set,
+                                                         images_fake=distillation_dataset, device=self.device)
+                logging.info(f'FID Score: {fid_score}')
+                wandb.log({'Gen/FID Score Distillation Set': fid_score, 'Round': round_idx})
                 logging.info("########## Calculating FID Score... Complete #########")
 
             # test results
