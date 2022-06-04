@@ -3,10 +3,10 @@ import logging
 from typing import List, Tuple
 
 import torch
+import torchvision.transforms as tfs
 import wandb
 from torch.utils.data import DataLoader, TensorDataset
 from torchvision.utils import make_grid
-import torchvision.transforms as tfs
 
 from FID.FIDScorer import FIDScorer
 from fedml_api.standalone.fedDTG_arjun.ac_gan_model_trainer import ACGANModelTrainer
@@ -69,9 +69,11 @@ class FedDTGArjunAPI(HeterogeneousModelBaseTrainerAPI):
     def train(self):
         w_global = self.generator.get_model_params()
         DISTILLATION_DATASET_SIZE = 10000
-        distillation_dataset = None
+        # distillation_dataset = None
         teacher_logits = None
         prev_client_subset = None
+        class_labels = range(self.generator_model.num_classes)
+        noise_vector = None
 
         for round_idx in range(self.args.comm_round):
 
@@ -88,12 +90,12 @@ class FedDTGArjunAPI(HeterogeneousModelBaseTrainerAPI):
 
             client: FedDTGArjunClient
             for client in client_subset:
-                # # Perform knowledge distillation (model drift correction) on current participating clients
-                # if prev_client_subset is not None and client.client_idx not in prev_client_subset:
-                #     logging.info(f"######## KD for new client {client.client_idx} ########")
-                #     assert distillation_dataset is not None and teacher_logits is not None, 'Need both to perform KD'
-                #     # Calculate teacher logits as mean of logits belonging to other clients
-                #     client.classifier_knowledge_distillation(teacher_logits, distillation_dataset)
+                # Perform knowledge distillation (model drift correction) on current participating clients
+                if prev_client_subset is not None and client.client_idx not in prev_client_subset:
+                    logging.info(f"######## KD for new client {client.client_idx} ########")
+                    assert teacher_logits is not None and noise_vector is not None, 'Need both to perform KD'
+                    # Calculate teacher logits as mean of logits belonging to other clients
+                    client.classifier_knowledge_distillation(teacher_logits, noise_vector)
 
                 # Perform local training as usual
                 w_local = client.train(copy.deepcopy(w_global), round_idx)
@@ -112,46 +114,40 @@ class FedDTGArjunAPI(HeterogeneousModelBaseTrainerAPI):
             # logging.info('########## Distillation ########')
 
             # Creating distillation dataset here to save memory but same as if sending noise vector to clients
-            noise_vector = self.generator_model.generate_noise_vector(DISTILLATION_DATASET_SIZE, device=self.device)
-            labels = self.generator_model.generate_balanced_labels(DISTILLATION_DATASET_SIZE, device=self.device)
-            noise_labels = TensorDataset(noise_vector, labels)
-            noise_labels_loader = DataLoader(noise_labels, batch_size=self.args.batch_size)
+            noise_vector = self.generator_model.generate_noise_vector(DISTILLATION_DATASET_SIZE // len(class_labels),
+                                                                      device=self.device)
+            local_logits = []
+            logging.info("########## Acquiring distillation logits... #########")
+            for client in client_subset:
+                logits = client.get_distillation_logits(copy.deepcopy(w_global), noise_vector, class_labels)
+                local_logits.append(logits)
+                logging.info(f"Client {client.client_idx} complete")
 
-            synth_data = self.generator.generate_distillation_dataset(noise_labels_loader, device=self.device)
-            del noise_labels_loader
-            distillation_dataset = DataLoader(TensorDataset(synth_data, labels), batch_size=self.args.batch_size)
-            #
-            # local_logits = []
-            # logging.info("########## Acquiring distillation logits... #########")
-            # for client in client_subset:
-            #     logits = client.get_distillation_logits(copy.deepcopy(w_global), distillation_dataset)
-            #     local_logits.append(logits)
-            #     logging.info(f"Client {client.client_idx} complete")
-            #
-            # # Calculate average soft labels
-            # logging.info(f"######## Knowledge distillation stage ########")
-            # for idx, client in enumerate(client_subset):
-            #     # Calculate teacher logits for client
-            #     logging.info(f"##### Client {client.client_idx} #####")
-            #     teacher_logits = torch.mean(torch.stack(local_logits[:idx] + local_logits[idx + 1:]), dim=0)
-            #     teacher_logits = DataLoader(TensorDataset(teacher_logits), batch_size=self.args.batch_size)
-            #
-            #     client.classifier_knowledge_distillation(teacher_logits, distillation_dataset)
+            # Calculate average soft labels
+            logging.info(f"######## Knowledge distillation stage ########")
+            for idx, client in enumerate(client_subset):
+                # Calculate teacher logits for client
+                logging.info(f"##### Client {client.client_idx} #####")
+                teacher_logits = torch.mean(torch.stack(local_logits[:idx] + local_logits[idx + 1:]), dim=0)
+                teacher_logits = DataLoader(TensorDataset(teacher_logits), batch_size=self.args.batch_size)
+                client.classifier_knowledge_distillation(teacher_logits)
 
-            # For next round
-            # teacher_logits = torch.mean(torch.stack(local_logits), dim=0)
-            # teacher_logits = DataLoader(TensorDataset(teacher_logits), batch_size=self.args.batch_size)
-            # prev_client_subset = {c.client_idx for c in client_subset}
+            teacher_logits = torch.mean(torch.stack(local_logits), dim=0)
+            teacher_logits = DataLoader(TensorDataset(teacher_logits), batch_size=self.args.batch_size)
+            prev_client_subset = {c.client_idx for c in client_subset}
 
             if round_idx % 1 == 0:
-                logging.info("########## Logging generator images... #########")
-                self.log_gan_images(caption=f'Generator Output, communication round: {round_idx}', round_idx=round_idx)
-                logging.info("########## Logging generator images... Complete #########")
                 logging.info("########## Calculating FID Score...  #########")
-                fid_score = self.FIDScorer.calculate_fid(images_real=self.FID_source_set,
-                                                         images_fake=distillation_dataset, device=self.device)
-                logging.info(f'FID Score: {fid_score}')
-                wandb.log({'Gen/FID Score Distillation Set': fid_score, 'Round': round_idx})
+                fid_scores = []
+                c: FedDTGArjunClient
+                for c in self.client_list:
+                    fid_scores.append(c.get_FID_score(self.FIDScorer, self.FID_source_set, round_idx))
+                    c.log_gan_images(caption=f'Generator Output, communication round: {round_idx}',
+                                     round_idx=round_idx,
+                                     fixed_labels=self.fixed_labels,
+                                     fixed_noise=self.fixed_noise,
+                                     denorm=self.denorm)
+                wandb.log({'Gen/FID Score Distillation Set': sum(fid_scores) / len(fid_scores), 'Round': round_idx})
                 logging.info("########## Calculating FID Score... Complete #########")
 
             # test results

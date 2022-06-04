@@ -3,7 +3,7 @@ import logging
 import torch
 from torch import nn
 import torch.nn.functional as F
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, TensorDataset
 
 from fedml_api.model.cv.generator import ConditionalImageGenerator
 from knowledge_distillation.soft_target import SoftTarget
@@ -281,36 +281,26 @@ class ACGANModelTrainer(ModelTrainer):
         max_probs, labels = class_probabilities.max(dim=-1)
         return max_probs, labels
 
-    def generate_distillation_dataset(self, noise_labels: DataLoader, device):
+    def generate_distillation_dataset(self, noise, class_labels, batch_size, device):
         generator = self.generator.to(device)
         generator.eval()
+        noise = noise.detach().to(device)
         with torch.no_grad():
+            b_size = noise.size(0)
             synth_data = []
-            # labels_bucket = []
-            for noise, labels in noise_labels:
-                noise, labels = noise.to(device), labels.to(device)
-                generated_data = generator(noise, labels)
-                synth_data.append(generated_data.cpu())
-                # labels_bucket.append(copy.deepcopy(labels.cpu()))
-
-            # noise = noise.to(device)
-            #
-            # b_size = noise.size(0)
-            #
-            # synth_data = []
-            # labels = []
-            # for label in class_labels:
-            #     label_vector = torch.full(size=(b_size,), fill_value=label, device=device)
-            #     generated_data = generator(noise, label_vector)
-            #     synth_data.append(generated_data)
-            #     labels.append(label_vector)
+            labels = []
+            for label in class_labels:
+                label_vector = torch.full(size=(b_size,), fill_value=label, device=device)
+                generated_data = generator(noise, label_vector)
+                synth_data.append(generated_data)
+                labels.append(label_vector)
 
             synth_data = torch.cat(synth_data, dim=0)
-        # labels = torch.cat(labels_bucket, dim=0)
+            labels = torch.cat(labels, dim=0)
 
-        # dataset = TensorDataset(synth_data, labels)
-        # data_loader = DataLoader(dataset, batch_size=noise_labels.batch_size)
-        return synth_data
+        dataset = TensorDataset(synth_data, labels)
+        data_loader = DataLoader(dataset, batch_size=batch_size)
+        return data_loader
 
     def _train_loop(self, model, train_data, criterion, epochs, optimizer, device):
         pass
