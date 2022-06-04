@@ -112,14 +112,14 @@ class FedDTGArjunAPI(HeterogeneousModelBaseTrainerAPI):
             # logging.info('########## Distillation ########')
 
             # Creating distillation dataset here to save memory but same as if sending noise vector to clients
-            # noise_vector = self.generator_model.generate_noise_vector(DISTILLATION_DATASET_SIZE, device=self.device)
-            # labels = self.generator_model.generate_balanced_labels(DISTILLATION_DATASET_SIZE, device=self.device)
-            # noise_labels = TensorDataset(noise_vector, labels)
-            # noise_labels_loader = DataLoader(noise_labels, batch_size=self.args.batch_size)
-            #
-            # synth_data = self.generator.generate_distillation_dataset(noise_labels_loader, device=self.device)
-            # del noise_labels_loader
-            # distillation_dataset = DataLoader(TensorDataset(synth_data, labels), batch_size=self.args.batch_size)
+            noise_vector = self.generator_model.generate_noise_vector(DISTILLATION_DATASET_SIZE, device=self.device)
+            labels = self.generator_model.generate_balanced_labels(DISTILLATION_DATASET_SIZE, device=self.device)
+            noise_labels = TensorDataset(noise_vector, labels)
+            noise_labels_loader = DataLoader(noise_labels, batch_size=self.args.batch_size)
+
+            synth_data = self.generator.generate_distillation_dataset(noise_labels_loader, device=self.device)
+            del noise_labels_loader
+            distillation_dataset = DataLoader(TensorDataset(synth_data, labels), batch_size=self.args.batch_size)
             #
             # local_logits = []
             # logging.info("########## Acquiring distillation logits... #########")
