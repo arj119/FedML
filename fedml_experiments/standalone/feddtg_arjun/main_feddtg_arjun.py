@@ -10,7 +10,7 @@ from fedml_experiments.standalone.utils.experiment import ExperimentBase
 
 
 class FedDTGArjunExperiment(ExperimentBase):
-    algorithm_name = 'FedDTGArjun'
+    algorithm_name = 'FedGDKD Without Co-Distillation'
 
     def add_custom_args(self, parser):
         """
