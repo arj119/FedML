@@ -2,11 +2,9 @@ import logging
 
 import torch
 from torch import nn
-import torch.nn.functional as F
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, TensorDataset
 
 from fedml_api.model.cv.generator import ConditionalImageGenerator
-from knowledge_distillation.soft_target import SoftTarget
 
 try:
     from fedml_core.trainer.model_trainer import ModelTrainer
@@ -15,7 +13,7 @@ except ImportError:
 
 
 class ACGANModelTrainer(ModelTrainer):
-    def __init__(self, generator, local_model):
+    def __init__(self, generator, disc_classifier):
         """
         Args:
             generator: Homogeneous model between clients that acts as knowledge transfer vehicle. In this case Generator
@@ -23,13 +21,15 @@ class ACGANModelTrainer(ModelTrainer):
         """
         super().__init__(generator)
         self.generator: ConditionalImageGenerator = generator
-        self.local_model = local_model
+        self.disc_classifier = disc_classifier
 
     def get_model_params(self):
-        return self.generator.cpu().state_dict()
+        return self.generator.cpu().state_dict(), self.disc_classifier.cpu().state_dict()
 
     def set_model_params(self, model_parameters):
-        self.generator.load_state_dict(model_parameters)
+        gen, disc = model_parameters
+        self.generator.load_state_dict(gen)
+        self.disc_classifier.load_state_dict(disc)
 
     def train(self, train_data, device, args=None):
         """
@@ -41,7 +41,7 @@ class ACGANModelTrainer(ModelTrainer):
         Returns:
 
         """
-        generator, discriminator = self.generator.to(device), self.local_model.to(device)
+        generator, discriminator = self.generator.to(device), self.disc_classifier.to(device)
 
         optimiser_G = self.get_client_optimiser(generator, args.gen_optimizer, args.gen_lr)
         optimiser_D = self.get_client_optimiser(discriminator, args.client_optimizer, args.lr)
@@ -52,13 +52,11 @@ class ACGANModelTrainer(ModelTrainer):
                       optimiser_D, device):
         generator.train()
         discriminator.train()
-        real_label, fake_label = 1, 0  # Soft labels
+        real_label, fake_label = 0.9, 0  # Soft labels
 
         # Initialize BCELoss function
         adversarial_loss = nn.BCELoss().to(device)
         auxiliary_loss = nn.CrossEntropyLoss().to(device)
-
-        torch.autograd.set_detect_anomaly(True)
 
         epoch_loss_D = []
         epoch_loss_G = []
@@ -129,81 +127,8 @@ class ACGANModelTrainer(ModelTrainer):
             logging.info(
                 f'tEpoch: {epoch}\t Gen Loss: {epoch_loss_G[-1]:.6f}\t Disc Loss: {epoch_loss_D[-1]:.6f}')
 
-    def get_classifier_logits(self, distillation_dataset, device):
-        """
-
-        Args:
-            noise: A noise tensor of shape (b_size,)
-            class_labels: A list of all possible classes to iterate through
-            device: Device to perform computation on either 'cpu' or 'gpu:...'
-
-        Returns:
-            A concatenation of classifier logits for each sample
-
-        """
-        classifier = self.local_model.to(device)
-        classifier.eval()
-
-        with torch.no_grad():
-            logits, validity_outputs = [], []
-            for synth_data, _ in distillation_dataset:
-                synth_data = synth_data.to(device)
-                pred_logits, validity = classifier(synth_data, discriminator=True)
-                logits.append(pred_logits)
-                validity_outputs.append(validity)
-        return torch.cat(logits).detach().cpu(), torch.cat(validity_outputs).detach().cpu()
-
-    def knowledge_distillation(self, distillation_dataset: DataLoader, consensus_outputs: DataLoader, device, args):
-        assert len(distillation_dataset) == len(
-            consensus_outputs), f"distillation_dataset of size {len(distillation_dataset)}, vs consensus logits of size {len(consensus_outputs)}"
-
-        classifier = self.local_model.to(device)
-        classifier.train()
-
-        kd_criterion_logits = SoftTarget(T=4).to(device)
-        kd_criterion_validity = nn.MSELoss().to(device)
-        cls_criterion = nn.CrossEntropyLoss().to(device)
-
-        kd_alpha = args.kd_alpha
-
-        if args.client_optimizer == "sgd":
-            optimiser_D = torch.optim.SGD(self.local_model.parameters(), lr=args.lr)
-
-
-        else:
-            beta1, beta2 = 0.5, 0.999
-            optimiser_D = torch.optim.Adam(filter(lambda p: p.requires_grad, self.local_model.parameters()),
-                                           lr=args.lr,
-                                           weight_decay=args.wd,
-                                           amsgrad=True,
-                                           betas=(beta1, beta2)
-                                           )
-
-        epoch_dist_loss = []
-        for epoch in range(args.kd_epochs):
-            batch_dist_loss = []
-            for idx, data in enumerate(zip(distillation_dataset, consensus_outputs)):
-                (synth_data, labels), (t_logits, t_validity) = data
-                synth_data, labels, t_logits, t_validity = synth_data.to(device), labels.to(device), t_logits.to(
-                    device), t_validity.to(device)
-
-                optimiser_D.zero_grad()
-
-                cls_logits, validity = classifier(synth_data, discriminator=True)
-
-                kd_loss = (kd_criterion_logits(cls_logits, t_logits) + kd_criterion_validity(validity, t_validity)) / 2
-                diss_loss = (1 - kd_alpha) * cls_criterion(cls_logits, labels) + kd_alpha * kd_loss
-                diss_loss.backward()
-                optimiser_D.step()
-
-                batch_dist_loss.append(diss_loss.item())
-
-            epoch_dist_loss.append(sum(batch_dist_loss) / len(batch_dist_loss))
-            logging.info(
-                f'tEpoch: {epoch}\t Diss loss {epoch_dist_loss[-1]:.6f}')
-
     def test(self, test_data, device, args=None):
-        model = self.local_model.to(device)
+        model = self.disc_classifier.to(device)
         model.eval()
 
         metrics = {
@@ -255,44 +180,26 @@ class ACGANModelTrainer(ModelTrainer):
     def test_on_the_server(self, train_data_local_dict, test_data_local_dict, device, args=None) -> bool:
         return False
 
-    def pre_train(self, private_data, device, args):
-        """
-               Pre-training in FedMD algorithm to do transfer learning from public data set
-               to private dataset
-
-               Args:
-                   private_data: Private data only known to the client
-                   device: Device to perform training on
-                   args: Other args
-               Returns:
-
-               """
-        model = self.local_model
-        model.to(device)
-
-        optimiser_D = self.get_client_optimiser(model, args.client_optimizer, args.lr)
-
-        # Transfer learning to private dataset
-        self._train_loop(model, train_data=private_data, criterion=None, epochs=args.pretrain_epochs_private,
-                         optimizer=optimiser_D, device=device)
-
-    def _get_pseudo_labels_with_probability(self, disc_logits):
-        class_probabilities = F.softmax(disc_logits, dim=-1)
-        max_probs, labels = class_probabilities.max(dim=-1)
-        return max_probs, labels
-
-    def generate_distillation_dataset(self, noise_labels: DataLoader, device):
+    def generate_fake_dataset(self, size, device, batch_size):
         generator = self.generator.to(device)
         generator.eval()
+
+        noise_vector = generator.generate_noise_vector(size, device=device)
+        labels_vector = generator.generate_balanced_labels(size, device=device)
+
+        noise_labels = TensorDataset(noise_vector, labels_vector)
+        noise_labels_loader = DataLoader(noise_labels, batch_size=batch_size)
+
         with torch.no_grad():
             synth_data = []
-            for noise, labels in noise_labels:
+            for noise, labels in noise_labels_loader:
                 noise, labels = noise.to(device), labels.to(device)
                 generated_data = generator(noise, labels)
                 synth_data.append(generated_data.cpu())
             synth_data = torch.cat(synth_data, dim=0)
 
-        return synth_data
+        assert synth_data.size(0) == labels_vector.size(0), f'{synth_data.size(0)} != {labels_vector.size(0)}'
+        fake_data = DataLoader(TensorDataset(synth_data, labels_vector), batch_size=batch_size)
 
-    def _train_loop(self, model, train_data, criterion, epochs, optimizer, device):
-        pass
+        del noise_labels_loader
+        return fake_data

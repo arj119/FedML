@@ -26,8 +26,6 @@ class FedAvgMultiClientExperiment(ExperimentBase):
         return parser
 
     def experiment_start(self, client_model_config, client_models, args, device, dataset):
-        client_models = create_local_models_from_config(client_model_config, args, dataset)
-
         assert len(
             client_models) == 1, f'FedAvg can only work with a single shared model, you have provided {len(client_models)}'
 
