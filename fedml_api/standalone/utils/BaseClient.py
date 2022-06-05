@@ -3,6 +3,8 @@ from torch.utils.data import DataLoader
 from collections import Counter
 import torch
 
+from fedml_api.standalone.fd_faug.utils.data_utils import AugmentDataset
+
 
 class BaseClient:
 
