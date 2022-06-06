@@ -27,7 +27,7 @@ class FDFAugExperiment(ExperimentBase):
                                  '[(client_model, freq)]')
 
         parser.add_argument('--share_percentage', type=float, default=0.05,
-                            help='Number of epochs to be carries out on private dataset in local training')
+                            help='Percentage of private dataset each client is willing to share')
 
         parser.add_argument('--nz', type=int,
                             default=100,
