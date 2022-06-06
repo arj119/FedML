@@ -1,9 +1,10 @@
 import logging
-
+import random
 import numpy as np
 import torch
 import torch.utils.data as data
 import torchvision.transforms as transforms
+from torch.utils.data import Subset
 
 from .datasets import EMNIST_truncated
 
@@ -90,6 +91,18 @@ def get_dataloader_EMNIST(datadir, train_bs, test_bs, dataidxs=None):
     test_dl = data.DataLoader(dataset=test_ds, batch_size=test_bs, shuffle=False, drop_last=True)
 
     return train_dl, test_dl
+
+
+def get_dataloader_EMNIST_train_subset(datadir, train_bs, size):
+    dl_obj = EMNIST_truncated
+
+    transform_train, transform_test = _data_transforms_emnist()
+
+    train_ds = dl_obj(datadir, train=True, transform=transform_train, download=True)
+    train_data_num = len(train_ds)
+    sample_indices = random.sample(range(train_data_num), min(size, train_data_num))
+    subset = Subset(train_ds, sample_indices)
+    return data.DataLoader(subset, batch_size=train_bs, shuffle=True)
 
 
 def get_dataloader_test_EMNIST(datadir, train_bs, test_bs, dataidxs_train=None, dataidxs_test=None):

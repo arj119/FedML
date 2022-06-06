@@ -18,7 +18,7 @@ class FedMDExperiment(ExperimentBase):
         return a parser added with args required by fit
         """
         # FedMD arguments
-        parser.add_argument('--public_dataset_size', type=int, default=5000,
+        parser.add_argument('--public_dataset_size', type=int, default=10000,
                             help='Size of the public dataset that should be created')
 
         parser.add_argument('--pretrain_epochs_public', type=int, default=20,

@@ -1,13 +1,13 @@
 import copy
 import logging
-import random
 from collections import Counter
 from typing import List, Tuple
 
-import numpy as np
 import torch
 import wandb
 
+from fedml_api.data_preprocessing.EMNIST.data_loader import get_dataloader_EMNIST_train_subset
+from fedml_api.data_preprocessing.MNIST.data_loader_better import get_dataloader_MNIST_train_subset
 from fedml_api.standalone.fedmd.client import Client
 from fedml_api.standalone.fedmd.model_trainer import FedMLModelTrainer
 from fedml_api.standalone.fedmd.utils.data_utils import PublicDataset
@@ -136,3 +136,32 @@ class FedMDAPI(HeterogeneousModelBaseTrainerAPI):
         client_test_label_count = {client_idx: label_count for client_idx, label_count in client_label_counts}
         plot_label_distributions(client_test_label_count, self.class_num, alpha=self.args.partition_alpha,
                                  dataset='Test')
+
+    def _create_public_dataset(self):
+        if self.args.dataset in ['mnist', 'emnist']:
+            logging.info('Using proxy dataset')
+            # If proxy dataset is available use proxy dataset
+            if self.args.dataset == 'mnist':
+                logging.info('EMNIST')
+                dataset_loader = get_dataloader_EMNIST_train_subset
+                data_dir = self.args.data_dir.replace('mnist', 'emnist')
+            else:
+                logging.info('MNIST')
+                dataset_loader = get_dataloader_MNIST_train_subset
+                data_dir = self.args.data_dir.replace('emnist', 'mnist')
+
+            public_data = dataset_loader(data_dir, self.args.batch_size, self.args.public_dataset_size)
+        else:
+            # If proxy dataset is not available use shared data
+            logging.info(
+                f'Proxy dataset is unavailable, clients will share {self.args.share_percentage * 100}% private data')
+            public_datasets = []
+            public_dataset_size = 0
+
+            for c in self.client_list:
+                client_shared_data = c.share_data(self.args.share_percentage, self.args)
+                public_dataset_size += len(client_shared_data.dataset)
+                public_datasets.append(client_shared_data)
+
+            public_data = PublicDataset(public_datasets)
+        return public_data

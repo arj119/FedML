@@ -4,6 +4,7 @@ import numpy as np
 import torch
 import torch.utils.data as data
 import torchvision.transforms as transforms
+import random
 
 from .datasets import MNIST_truncated
 
@@ -106,6 +107,18 @@ def get_dataloader_test_MNIST(datadir, train_bs, test_bs, dataidxs_train=None, d
     test_dl = data.DataLoader(dataset=test_ds, batch_size=test_bs, shuffle=False)
 
     return train_dl, test_dl
+
+
+def get_dataloader_MNIST_train_subset(datadir, train_bs, size):
+    dl_obj = MNIST_truncated
+
+    transform_train, transform_test = _data_transforms_mnist()
+
+    train_ds = dl_obj(datadir, train=True, transform=transform_train, download=True)
+    train_data_num = len(train_ds)
+    sample_indices = random.sample(range(train_data_num), min(size, train_data_num))
+    subset = data.Subset(train_ds, sample_indices)
+    return data.DataLoader(subset, batch_size=train_bs, shuffle=True)
 
 
 def load_partition_data_distributed_mnist(process_id, dataset, data_dir, partition_method, partition_alpha,
