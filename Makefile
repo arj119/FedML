@@ -35,3 +35,8 @@ run-mnist-experiments-colab:
 	./run_fed_experiment_colab.sh feddtg_arjun mnist mnist
 	./run_fed_experiment_colab.sh feddtg mnist mnist
 	./run_fed_experiment_colab.sh fd_faug mnist mnist
+
+run-fedgan-experiments:
+	./run_fed_experiment.sh fedgan mnist mnist hetero 0.5 4 0.25 50 5 GAN_fid 1 10 10 ./experiment_client_configs/homogeneous_all_participating.json
+	./run_fed_experiment.sh fedgan mnist mnist hetero 0.1 4 0.25 50 5 GAN_fid 1 10 10 ./experiment_client_configs/homogeneous_all_participating.json
+	./run_fed_experiment.sh fedgan mnist mnist hetero 0.05 3 0.25 50 5 GAN_fid 1 10 10 ./experiment_client_configs/homogeneous_all_participating.json

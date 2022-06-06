@@ -107,7 +107,7 @@ class HeterogeneousModelBaseTrainerAPI(ABC):
             the training client number is larger than the testing client number
             """
             # train data
-            train_local_metrics = client.local_test('train')
+            train_local_metrics = client.local_test('train', self.class_num, round_idx)
             train_metrics['num_samples'].append(copy.deepcopy(train_local_metrics['test_total']))
             train_metrics['num_correct'].append(copy.deepcopy(train_local_metrics['test_correct']))
             train_metrics['losses'].append(copy.deepcopy(train_local_metrics['test_loss']))
@@ -117,7 +117,7 @@ class HeterogeneousModelBaseTrainerAPI(ABC):
                                                                                   train_local_metrics['test_total']
 
             # test data
-            test_local_metrics = client.local_test('test')
+            test_local_metrics = client.local_test('test', self.class_num, round_idx)
             test_metrics['num_samples'].append(copy.deepcopy(test_local_metrics['test_total']))
             test_metrics['num_correct'].append(copy.deepcopy(test_local_metrics['test_correct']))
             test_metrics['losses'].append(copy.deepcopy(test_local_metrics['test_loss']))

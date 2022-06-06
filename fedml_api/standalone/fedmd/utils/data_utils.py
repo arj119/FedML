@@ -1,3 +1,6 @@
+from torch.utils.data import DataLoader
+
+
 def itr_merge(itrs):
     for itr in itrs:
         for v in itr:
@@ -12,7 +15,12 @@ class PublicDataset:
         return itr_merge(self.data_loaders)
 
     def __len__(self):
-        length = 0
+        size = 0
         for dl in self.data_loaders:
-            length += len(dl.dataset)
-        return length
+            if isinstance(dl, DataLoader):
+                dl_size = len(dl.dataset)
+            else:
+                dl_size = len(dl)
+
+            size += dl_size
+        return size

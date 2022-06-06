@@ -2,6 +2,12 @@ import logging
 from torch.utils.data import DataLoader
 from collections import Counter
 import torch
+from sklearn.metrics import confusion_matrix
+import seaborn as sn
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import wandb
 
 
 class BaseClient:
@@ -40,7 +46,7 @@ class BaseClient:
         logging.info(f'### Training Client {self.client_idx} (complete) ###')
         return weights
 
-    def local_test(self, data='test'):
+    def local_test(self, data='test', class_num=None, round_idx=None):
         if data == 'test':
             test_data = self.local_test_data
         elif data == 'val':
@@ -49,7 +55,21 @@ class BaseClient:
             test_data = self.global_test_data
         else:
             test_data = self._get_training_data_from_tuple()
-        metrics = self.model_trainer.test(test_data, self.device, self.args)
+        metrics, y_pred, y_true = self.model_trainer.test(test_data, self.device, self.args)
+
+        # Build confusion matrix
+        logging.info(f'Creating confusion matrix {self.client_idx}: {class_num}')
+        cf_matrix = confusion_matrix(y_true, y_pred, labels=range(class_num), normalize='true')
+        df_cm = pd.DataFrame(cf_matrix / np.sum(cf_matrix) * 10, index=[i for i in range(class_num)],
+                             columns=[i for i in range(class_num)])
+        plt.figure(figsize=(15, 15))
+        plt.title(f'Client {self.client_idx} Confusion Matrix ({data.title()}): Round {round_idx}')
+        sn.heatmap(df_cm, annot=True)
+        file_name = f'conf_matrix_{self.client_idx}.png'
+        plt.savefig(file_name)
+        image = wandb.Image(file_name)
+        wandb.log({f'Client {self.client_idx}/{data.title()}/Confusion Matrix': image, 'Round': round_idx})
+        plt.clf()
         return metrics
 
     def get_label_distribution(self, mode='train'):

@@ -1,4 +1,4 @@
-from torch.utils.data import SubsetRandomSampler, DataLoader, Dataset
+from torch.utils.data import SubsetRandomSampler, DataLoader
 
 from fedml_api.standalone.utils.BaseClient import BaseClient
 import torch
