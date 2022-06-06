@@ -29,9 +29,9 @@ class FedGANAPI(HeterogeneousModelBaseTrainerAPI):
         self.global_models = ACGANModelTrainer(generator, discriminator)
         # For logging GAN progress
         self.fixed_labels = self.global_models.generator.generate_balanced_labels(
-            self.global_models.generator.num_classes,
+            self.global_models.generator.num_classes * 8,
             device='cpu')
-        self.fixed_noise = self.global_models.generator.generate_noise_vector(self.global_models.generator.num_classes,
+        self.fixed_noise = self.global_models.generator.generate_noise_vector(self.global_models.generator.num_classes * 8,
                                                                               device='cpu')
 
         self._setup_clients(self.train_data_local_num_dict, self.train_data_local_dict, self.test_data_local_dict,
