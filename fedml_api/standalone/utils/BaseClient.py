@@ -58,6 +58,7 @@ class BaseClient:
         metrics, y_pred, y_true = self.model_trainer.test(test_data, self.device, self.args)
 
         # Build confusion matrix
+        logging.info(f'Creating confusion matrix {self.client_idx}: {class_num}')
         cf_matrix = confusion_matrix(y_true, y_pred)
         df_cm = pd.DataFrame(cf_matrix / np.sum(cf_matrix) * 10, index=[i for i in range(class_num)],
                              columns=[i for i in range(class_num)])

@@ -99,7 +99,7 @@ class ModelTrainer(ABC):
                     _, predicted = torch.max(pred, 1)
                     correct = predicted.eq(target).sum()
 
-                output = (torch.max(torch.exp(pred), 1)[1]).data.cpu().numpy()
+                output = predicted.data.cpu().numpy()
                 y_pred.extend(output)  # Save Prediction
                 y_true.extend(target.data.cpu().numpy())  # Save Truth
 
