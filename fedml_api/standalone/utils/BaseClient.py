@@ -59,7 +59,7 @@ class BaseClient:
 
         # Build confusion matrix
         logging.info(f'Creating confusion matrix {self.client_idx}: {class_num}')
-        cf_matrix = confusion_matrix(y_true, y_pred)
+        cf_matrix = confusion_matrix(y_true, y_pred, labels=range(class_num), normalize='true')
         df_cm = pd.DataFrame(cf_matrix / np.sum(cf_matrix) * 10, index=[i for i in range(class_num)],
                              columns=[i for i in range(class_num)])
         plt.figure(figsize=(15, 15))
