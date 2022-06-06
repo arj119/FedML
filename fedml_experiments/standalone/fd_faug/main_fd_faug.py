@@ -44,7 +44,7 @@ class FDFAugExperiment(ExperimentBase):
                             help='Optimiser of generator')
 
         parser.add_argument('--faug_epochs', type=int,
-                            default=100,
+                            default=200,
                             help='Number of FAug training epochs')
         return parser
 
