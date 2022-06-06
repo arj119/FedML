@@ -101,8 +101,7 @@ class ModelTrainer(ABC):
 
                 output = (torch.max(torch.exp(pred), 1)[1]).data.cpu().numpy()
                 y_pred.extend(output)  # Save Prediction
-                target = target.data.cpu().numpy()
-                y_true.extend(target)  # Save Truth
+                y_true.extend(target.data.cpu().numpy())  # Save Truth
 
                 metrics['test_correct'] += correct.item()
                 metrics['test_loss'] += loss.item() * target.size(0)
