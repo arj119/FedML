@@ -9,13 +9,13 @@ from torchvision.utils import make_grid
 import torchvision.transforms as tfs
 
 from FID.FIDScorer import FIDScorer
-from fedml_api.standalone.fedDTG_arjun.ac_gan_model_trainer import ACGANModelTrainer
-from fedml_api.standalone.fedDTG_arjun.client import FedDTGArjunClient
-from fedml_api.standalone.fedDTG_arjun.model_trainer import FedDTGArjunModelTrainer
+from fedml_api.standalone.fedgdkd.ac_gan_model_trainer import ACGANModelTrainer
+from fedml_api.standalone.fedgdkd.client import FedGDKDClient
+from fedml_api.standalone.fedgdkd.model_trainer import FedGDKDModelTrainer
 from fedml_api.standalone.utils.HeterogeneousModelBaseTrainerAPI import HeterogeneousModelBaseTrainerAPI
 
 
-class FedDTGArjunAPI(HeterogeneousModelBaseTrainerAPI):
+class FedGDKDAPI(HeterogeneousModelBaseTrainerAPI):
     def __init__(self, dataset, device, args, generator, client_models: List[Tuple[torch.nn.Module, int]]):
         """
         Args:
@@ -54,13 +54,13 @@ class FedDTGArjunAPI(HeterogeneousModelBaseTrainerAPI):
         c_idx = 0
         for local_model, freq in client_models:
             for i in range(freq):
-                model_trainer = FedDTGArjunModelTrainer(
+                model_trainer = FedGDKDModelTrainer(
                     copy.deepcopy(self.generator.model),
                     copy.deepcopy(local_model)
                 )
-                c = FedDTGArjunClient(c_idx, train_data_local_dict[c_idx], test_data_local_dict[c_idx],
-                                      train_data_local_num_dict[c_idx], self.test_global, self.args, self.device,
-                                      model_trainer)
+                c = FedGDKDClient(c_idx, train_data_local_dict[c_idx], test_data_local_dict[c_idx],
+                                  train_data_local_num_dict[c_idx], self.test_global, self.args, self.device,
+                                  model_trainer)
                 c_idx += 1
                 self.client_list.append(c)
 
@@ -86,7 +86,7 @@ class FedDTGArjunAPI(HeterogeneousModelBaseTrainerAPI):
 
             w_locals = []
 
-            client: FedDTGArjunClient
+            client: FedGDKDClient
             for client in client_subset:
                 # Perform knowledge distillation (model drift correction) on current participating clients
                 if prev_client_subset is not None and client.client_idx not in prev_client_subset:

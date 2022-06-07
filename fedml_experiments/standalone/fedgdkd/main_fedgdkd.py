@@ -5,12 +5,12 @@ import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.getcwd(), "../../../")))
 
 from fedml_experiments.standalone.utils.model import create_model, create_local_models_from_config
-from fedml_api.standalone.fedDTG_arjun.server import FedDTGArjunAPI
+from fedml_api.standalone.fedgdkd.server import FedGDKDAPI
 from fedml_experiments.standalone.utils.experiment import ExperimentBase
 
 
-class FedDTGArjunExperiment(ExperimentBase):
-    algorithm_name = 'FedDTGArjun'
+class FedGDKDExperiment(ExperimentBase):
+    algorithm_name = 'FedGDKD'
 
     def add_custom_args(self, parser):
         """
@@ -50,9 +50,9 @@ class FedDTGArjunExperiment(ExperimentBase):
 
     def experiment_start(self, client_model_config, client_models, args, device, dataset):
         generator = create_model(args, model_name=client_model_config['generator'], output_dim=dataset[7])
-        api = FedDTGArjunAPI(dataset, device, args, generator, client_models)
+        api = FedGDKDAPI(dataset, device, args, generator, client_models)
         api.train()
 
 
 if __name__ == "__main__":
-    FedDTGArjunExperiment().start()
+    FedGDKDExperiment().start()

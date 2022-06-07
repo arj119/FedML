@@ -26,7 +26,7 @@ CI=${12}
 
 CLIENT_CONFIG_FILE=${13}
 
-python3 ./main_feddtg_arjun.py \
+python3 ./main_fedgdkd.py \
 --gpu $GPU \
 --dataset $DATASET \
 --data_dir $DATA_PATH \
