@@ -68,7 +68,7 @@ class FedGDKDAPI(HeterogeneousModelBaseTrainerAPI):
 
     def train(self):
         w_global = self.generator.get_model_params()
-        DISTILLATION_DATASET_SIZE = 10000
+        DISTILLATION_DATASET_SIZE = self.args.distillation_dataset_size
         distillation_dataset = None
         teacher_logits = None
         prev_client_subset = None

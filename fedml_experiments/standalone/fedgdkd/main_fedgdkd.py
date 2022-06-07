@@ -46,6 +46,9 @@ class FedGDKDExperiment(ExperimentBase):
         parser.add_argument('--kd_epochs', type=int, default=5,
                             help='Number of knowledge distillation epochs')
 
+        parser.add_argument('--distillation_dataset_size', type=int, default=10000,
+                            help='Size of distillation dataset to construct')
+
         return parser
 
     def experiment_start(self, client_model_config, client_models, args, device, dataset):
