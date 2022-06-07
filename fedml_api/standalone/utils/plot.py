@@ -3,7 +3,6 @@ import matplotlib.pyplot as plt
 from collections import defaultdict
 import logging
 import wandb
-import plotly
 
 
 def convert_to_list(data: dict):
