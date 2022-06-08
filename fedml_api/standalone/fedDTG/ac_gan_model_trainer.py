@@ -65,7 +65,7 @@ class ACGANModelTrainer(ModelTrainer):
         generator.train()
         discriminator.train()
         classifier.train()
-        real_label, fake_label = 1, 0  # Soft labels
+        real_label, fake_label = 0.9, 0  # Soft labels
 
         # Initialize BCELoss function
         adversarial_loss = nn.BCELoss().to(device)
@@ -196,18 +196,7 @@ class ACGANModelTrainer(ModelTrainer):
 
         kd_alpha = args.kd_alpha
 
-        if args.client_optimizer == "sgd":
-            optimiser_C = torch.optim.SGD(self.local_model.parameters(), lr=args.lr)
-
-
-        else:
-            beta1, beta2 = 0.5, 0.999
-            optimiser_C = torch.optim.Adam(filter(lambda p: p.requires_grad, self.local_model.parameters()),
-                                           lr=args.lr,
-                                           weight_decay=args.wd,
-                                           amsgrad=True,
-                                           betas=(beta1, beta2)
-                                           )
+        optimiser_C = self.get_client_optimiser(classifier, args.client_optimizer, args.lr)
 
         epoch_dist_loss = []
         for epoch in range(args.kd_epochs):
