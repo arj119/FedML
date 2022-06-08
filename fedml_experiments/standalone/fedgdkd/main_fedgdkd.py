@@ -49,6 +49,8 @@ class FedGDKDExperiment(ExperimentBase):
         parser.add_argument('--distillation_dataset_size', type=int, default=10000,
                             help='Size of distillation dataset to construct')
 
+        parser.add_argument('--change', type=str, default='')
+
         return parser
 
     def experiment_start(self, client_model_config, client_models, args, device, dataset):

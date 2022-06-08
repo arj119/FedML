@@ -60,7 +60,7 @@ class ExperimentBase(ABC):
 
         wandb.init(
             project="fedml",
-            name=f"{self.algorithm_name}",
+            name=f"{self.algorithm_name}-{args.change}",
             config=args,
             group=group_id
         )
