@@ -105,7 +105,9 @@ class ACGANModelTrainer(ModelTrainer):
                 # Loss measures generator's ability to fool the discriminator
                 _, validity = discriminator(gen_imgs, discriminator=True)
                 pred_label = classifier(gen_imgs)
+                gradient_reversal = pred_label.register_hook(lambda grad: -grad)  # gradient reversal
                 errG = (adversarial_loss(validity, label_real_adv) + auxiliary_loss(pred_label, gen_labels)) / 2
+                gradient_reversal.remove()  # remove gradient reversal hook
 
                 errG.backward()
                 optimiser_G.step()
@@ -300,18 +302,6 @@ class ACGANModelTrainer(ModelTrainer):
                 generated_data = generator(noise, labels)
                 synth_data.append(generated_data.cpu())
                 # labels_bucket.append(copy.deepcopy(labels.cpu()))
-
-            # noise = noise.to(device)
-            #
-            # b_size = noise.size(0)
-            #
-            # synth_data = []
-            # labels = []
-            # for label in class_labels:
-            #     label_vector = torch.full(size=(b_size,), fill_value=label, device=device)
-            #     generated_data = generator(noise, label_vector)
-            #     synth_data.append(generated_data)
-            #     labels.append(label_vector)
 
             synth_data = torch.cat(synth_data, dim=0)
         # labels = torch.cat(labels_bucket, dim=0)
