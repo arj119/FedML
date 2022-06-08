@@ -112,14 +112,7 @@ class FedGDKDAPI(HeterogeneousModelBaseTrainerAPI):
             logging.info('########## Distillation ########')
 
             # Creating distillation dataset here to save memory but same as if sending noise vector to clients
-            noise_vector = self.generator_model.generate_noise_vector(DISTILLATION_DATASET_SIZE, device=self.device)
-            labels = self.generator_model.generate_balanced_labels(DISTILLATION_DATASET_SIZE, device=self.device)
-            noise_labels = TensorDataset(noise_vector, labels)
-            noise_labels_loader = DataLoader(noise_labels, batch_size=self.args.batch_size)
-
-            synth_data = self.generator.generate_distillation_dataset(noise_labels_loader, device=self.device)
-            del noise_labels_loader
-            distillation_dataset = DataLoader(TensorDataset(synth_data, labels), batch_size=self.args.batch_size)
+            distillation_dataset = self.generate_fake_dataset(DISTILLATION_DATASET_SIZE)
 
             local_logits = []
             logging.info("########## Acquiring distillation logits... #########")
@@ -148,8 +141,13 @@ class FedGDKDAPI(HeterogeneousModelBaseTrainerAPI):
                 self.log_gan_images(caption=f'Generator Output, communication round: {round_idx}', round_idx=round_idx)
                 logging.info("########## Logging generator images... Complete #########")
                 logging.info("########## Calculating FID Score...  #########")
+                fake = distillation_dataset
+                if DISTILLATION_DATASET_SIZE != 10000:
+                    fake = self.generate_fake_dataset(DISTILLATION_DATASET_SIZE)
                 fid_score = self.FIDScorer.calculate_fid(images_real=self.FID_source_set,
-                                                         images_fake=distillation_dataset, device=self.device)
+                                                         images_fake=fake, device=self.device)
+                if DISTILLATION_DATASET_SIZE != 10000:
+                    del fake
                 logging.info(f'FID Score: {fid_score}')
                 wandb.log({'Gen/FID Score Distillation Set': fid_score, 'Round': round_idx})
                 logging.info("########## Calculating FID Score... Complete #########")
@@ -196,3 +194,14 @@ class FedGDKDAPI(HeterogeneousModelBaseTrainerAPI):
                 print('Number of channels, width and height must be provided for resize.')
             x = x.view(x.size(0), channels, w, h)
         return x
+
+    def generate_fake_dataset(self, size):
+        # Creating distillation dataset here to save memory but same as if sending noise vector to clients
+        noise_vector = self.generator_model.generate_noise_vector(size, device=self.device)
+        labels = self.generator_model.generate_balanced_labels(size, device=self.device)
+        noise_labels = TensorDataset(noise_vector, labels)
+        noise_labels_loader = DataLoader(noise_labels, batch_size=self.args.batch_size)
+
+        synth_data = self.generator.generate_distillation_dataset(noise_labels_loader, device=self.device)
+        del noise_labels_loader
+        return DataLoader(TensorDataset(synth_data, labels), batch_size=self.args.batch_size)

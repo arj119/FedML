@@ -60,7 +60,7 @@ class BaseClient:
         # Build confusion matrix
         logging.info(f'Creating confusion matrix {self.client_idx}: {class_num}')
         cf_matrix = confusion_matrix(y_true, y_pred, labels=range(class_num), normalize='true')
-        df_cm = pd.DataFrame(cf_matrix / np.sum(cf_matrix) * 10, index=range(class_num), columns=class_num)
+        df_cm = pd.DataFrame(cf_matrix / np.sum(cf_matrix) * 10, index=range(class_num), columns=range(class_num))
         plt.figure(figsize=(10, 10))
         sn.heatmap(df_cm, annot=True, annot_kws={"size": 12})
         plt.title(f'Client {self.client_idx} Confusion Matrix ({data.title()}): Round {round_idx}', fontsize=15)
