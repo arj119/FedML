@@ -135,7 +135,7 @@ class FedGDKDModelTrainer(ACGANModelTrainer):
                 logits.append(pred_logits)
         return torch.cat(logits).detach().cpu()
 
-    def knowledge_distillation(self, distillation_dataset: DataLoader, consensus_outputs: DataLoader, device, args):
+    def knowledge_distillation(self, distillation_dataset: DataLoader, consensus_outputs: DataLoader, device, args, alpha=None):
         assert len(distillation_dataset) == len(
             consensus_outputs), f"distillation_dataset of size {len(distillation_dataset)}, vs consensus logits of size {len(consensus_outputs)}"
 
@@ -145,7 +145,7 @@ class FedGDKDModelTrainer(ACGANModelTrainer):
         kd_criterion_logits = SoftTarget(T=4).to(device)
         cls_criterion = nn.CrossEntropyLoss().to(device)
 
-        kd_alpha = args.kd_alpha
+        # kd_alpha = args.kd_alpha
 
         optimiser_D = self.get_client_optimiser(classifier, args.client_optimizer, args.lr)
 
@@ -163,7 +163,7 @@ class FedGDKDModelTrainer(ACGANModelTrainer):
                 cls_logits = classifier(synth_data)
 
                 kd_loss = kd_criterion_logits(cls_logits, t_logits)
-                diss_loss = (1 - kd_alpha) * cls_criterion(cls_logits, labels) + kd_alpha * kd_loss
+                diss_loss = (1 - alpha) * cls_criterion(cls_logits, labels) + alpha * kd_loss
                 diss_loss.backward()
                 optimiser_D.step()
 

@@ -40,3 +40,6 @@ run-fedgan-experiments:
 	./run_fed_experiment.sh fedgan mnist mnist hetero 0.5 4 0.25 50 5 GAN_fid 1 10 10 ./experiment_client_configs/homogeneous_all_participating.json
 	./run_fed_experiment.sh fedgan mnist mnist hetero 0.1 4 0.25 50 5 GAN_fid 1 10 10 ./experiment_client_configs/homogeneous_all_participating.json
 	./run_fed_experiment.sh fedgan mnist mnist hetero 0.05 3 0.25 50 5 GAN_fid 1 10 10 ./experiment_client_configs/homogeneous_all_participating.json
+
+run-fedgdkd-alpha-schedule:
+	./run_fedgdkd.sh mnist mnist hetero 0.1 0 0.1 50 5 kd_parameter_study "alpha-linear" 1 10 10 ./experiment_client_configs/homogeneous_all_participating.json 10000 0.8 5

@@ -123,13 +123,16 @@ class FedGDKDAPI(HeterogeneousModelBaseTrainerAPI):
 
             # Calculate average soft labels
             logging.info(f"######## Knowledge distillation stage ########")
+
+            round_alpha = self.get_alpha(round_idx)
+
             for idx, client in enumerate(client_subset):
                 # Calculate teacher logits for client
                 logging.info(f"##### Client {client.client_idx} #####")
                 teacher_logits = torch.mean(torch.stack(local_logits[:idx] + local_logits[idx + 1:]), dim=0)
                 teacher_logits = DataLoader(TensorDataset(teacher_logits), batch_size=self.args.batch_size)
 
-                client.classifier_knowledge_distillation(teacher_logits, distillation_dataset)
+                client.classifier_knowledge_distillation(teacher_logits, distillation_dataset, round_alpha)
 
             # For next round
             teacher_logits = torch.mean(torch.stack(local_logits), dim=0)
@@ -205,3 +208,7 @@ class FedGDKDAPI(HeterogeneousModelBaseTrainerAPI):
         synth_data = self.generator.generate_distillation_dataset(noise_labels_loader, device=self.device)
         del noise_labels_loader
         return DataLoader(TensorDataset(synth_data, labels), batch_size=self.args.batch_size)
+
+    def get_alpha(self, round_idx):
+        wandb.log({'KD Alpha Schedule': round_idx / self.args.comm_round, 'Round': round_idx})
+        return round_idx / self.args.comm_round

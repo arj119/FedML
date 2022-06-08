@@ -55,5 +55,6 @@ class FedGDKDClient(BaseClient):
         # self.generate_distillation_set(noise_labels_loader)
         return self.model_trainer.get_classifier_logits(distillation_dataset, self.device)
 
-    def classifier_knowledge_distillation(self, consensus_outputs, distillation_dataset):
-        self.model_trainer.knowledge_distillation(distillation_dataset, consensus_outputs, self.device, self.args)
+    def classifier_knowledge_distillation(self, consensus_outputs, distillation_dataset, alpha):
+        self.model_trainer.knowledge_distillation(distillation_dataset, consensus_outputs, self.device, self.args,
+                                                  alpha)
