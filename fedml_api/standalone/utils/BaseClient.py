@@ -63,7 +63,7 @@ class BaseClient:
         df_cm = pd.DataFrame(cf_matrix / np.sum(cf_matrix) * 10, index=range(class_num), columns=class_num)
         plt.figure(figsize=(10, 10))
         sn.heatmap(df_cm, annot=True, annot_kws={"size": 12})
-        plt.title(f'Client {self.client_idx} Confusion Matrix ({data.title()}): Round {round_idx}')
+        plt.title(f'Client {self.client_idx} Confusion Matrix ({data.title()}): Round {round_idx}', fontsize=15)
         plt.xlabel('Ground Truth Label')
         plt.ylabel('Predicted Label')
         file_name = f'conf_matrix_{self.client_idx}.png'
