@@ -27,9 +27,6 @@ class FedGDKDModelTrainer(ACGANModelTrainer):
 
         epoch_loss_D = []
         epoch_loss_G = []
-        adv_losses = []
-        aux_losses = []
-        fake_losses = []
         for epoch in range(epochs):
             batch_loss_D, batch_loss_G = [], []
             # train_data = labelled_data if unlabelled_data is None else zip(labelled_data, unlabelled_data)
@@ -110,13 +107,10 @@ class FedGDKDModelTrainer(ACGANModelTrainer):
                 epoch_loss_G.append(sum(batch_loss_G) / len(batch_loss_G))
                 epoch_loss_D.append(sum(batch_loss_D) / len(batch_loss_D))
 
-            adv_losses.append(adv_loss_fake.item())
-            aux_losses.append(aux_loss_fake.item())
-            fake_losses.append(d_fake_loss.item() * 2)
             logging.info(
                 f'tEpoch: {epoch}\t Gen Loss: {epoch_loss_G[-1]:.6f}\t Disc Loss: {epoch_loss_D[-1]:.6f}')
 
-        return adv_losses, aux_losses, fake_losses
+        return adv_loss_fake.item(), aux_loss_fake.item(), d_fake_loss.item() * 2
 
 
 

@@ -29,21 +29,11 @@ class FedGDKDClient(BaseClient):
     def train(self, w_global, communication_round=0):
         logging.info(f'### Training Client {self.client_idx} ###')
         self.model_trainer.set_model_params(w_global)
-        adv_losses, aux_losses, fake_losses = self.model_trainer.train(self.local_training_data, self.device, self.args)
-        fig, ax = plt.subplots(figsize=(6, 5))
-
-        ax.plot(adv_losses, label='Discriminative loss')
-        ax.plot(aux_losses, label='Classification loss')
-        ax.plot(fake_losses, label='Total Loss')
-        ax.set_xlabel('Epoch', fontsize=10)
-        ax.set_ylabel('Loss', fontsize=10)
-        ax.set_title(f'GAN Fake Loss Client {self.client_idx}, Round {communication_round}', fontsize=12, y=1.15)
-        ax.legend(loc='upper center', bbox_to_anchor=(0.5, 1.1), ncol=5, frameon=False)
-        filename = f'Client {self.client_idx} - new loss {communication_round}.png'
-        plt.savefig(filename, dpi=100)
-        image = wandb.Image(filename)
-        plt.close('all')
-        wandb.log({f'Client {self.client_idx}/Train/Fake GAN Loss': image})
+        adv_loss, aux_loss, fake_loss = self.model_trainer.train(self.local_training_data, self.device, self.args)
+        wandb.log({f'Client {self.client_idx}/Train/Fake GAN Loss': fake_loss,
+                   f'Client {self.client_idx}/Train/Fake Discriminative Loss': adv_loss,
+                   f'Client {self.client_idx}/Train/Fake Classification Loss': fake_loss,
+                   'Round': communication_round})
         return self.model_trainer.get_model_params()
 
     def pre_train(self):
