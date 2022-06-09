@@ -3,11 +3,9 @@ import logging
 import torch
 from torch import nn
 import torch.nn.functional as F
-import torchvision.transforms as tfs
-from torchvision.utils import make_grid
 import wandb
-from torch.utils.data import TensorDataset, DataLoader
-from itertools import cycle
+from torch.utils.data import DataLoader
+import matplotlib.pyplot as plt
 
 from fedml_api.model.cv.generator import Generator, ConditionalImageGenerator
 from fedml_api.standalone.fedgdkd.ac_gan_model_trainer import ACGANModelTrainer
@@ -29,6 +27,9 @@ class FedGDKDModelTrainer(ACGANModelTrainer):
 
         epoch_loss_D = []
         epoch_loss_G = []
+        adv_losses = []
+        aux_losses = []
+        fake_losses = []
         for epoch in range(epochs):
             batch_loss_D, batch_loss_G = [], []
             # train_data = labelled_data if unlabelled_data is None else zip(labelled_data, unlabelled_data)
@@ -72,7 +73,7 @@ class FedGDKDModelTrainer(ACGANModelTrainer):
                 prob_label_fake = torch.gather(cls_logits_fake, 1, gen_labels.unsqueeze(-1))
                 aux_loss_fake = -torch.mean(prob_label_fake) + torch.mean(logz_fake)
                 adv_loss_fake = torch.mean(F.softplus(logz_fake))
-                d_real_loss = 0.5 * (aux_loss_fake + adv_loss_fake)
+                d_fake_loss = 0.5 * (aux_loss_fake + adv_loss_fake)
 
                 # 3. on labeled data
                 # 1. on Unlabelled data
@@ -81,7 +82,7 @@ class FedGDKDModelTrainer(ACGANModelTrainer):
                 prob_label_real = torch.gather(cls_logits_real, 1, labels.unsqueeze(-1))
                 aux_loss_real = -torch.mean(prob_label_real) + torch.mean(logz_real)
                 adv_loss_real = -torch.mean(logz_real) + torch.mean(F.softplus(logz_real))
-                d_fake_loss = 0.5 * (aux_loss_real + adv_loss_real)
+                d_real_loss = 0.5 * (aux_loss_real + adv_loss_real)
 
                 errD = d_real_loss + d_fake_loss
 
@@ -109,8 +110,15 @@ class FedGDKDModelTrainer(ACGANModelTrainer):
                 epoch_loss_G.append(sum(batch_loss_G) / len(batch_loss_G))
                 epoch_loss_D.append(sum(batch_loss_D) / len(batch_loss_D))
 
+            adv_losses.append(adv_loss_fake.item())
+            aux_losses.append(aux_loss_fake.item())
+            fake_losses.append(d_fake_loss.item() * 2)
             logging.info(
                 f'tEpoch: {epoch}\t Gen Loss: {epoch_loss_G[-1]:.6f}\t Disc Loss: {epoch_loss_D[-1]:.6f}')
+
+        return adv_losses, aux_losses, fake_losses
+
+
 
     def get_classifier_logits(self, distillation_dataset, device):
         """

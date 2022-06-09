@@ -46,7 +46,7 @@ class ACGANModelTrainer(ModelTrainer):
         optimiser_G = self.get_client_optimiser(generator, args.gen_optimizer, args.gen_lr)
         optimiser_D = self.get_client_optimiser(discriminator, args.client_optimizer, args.lr)
 
-        self._gan_training(generator, discriminator, train_data, args.epochs, optimiser_G, optimiser_D, device)
+        return self._gan_training(generator, discriminator, train_data, args.epochs, optimiser_G, optimiser_D, device)
 
     def _gan_training(self, generator: ConditionalImageGenerator, discriminator, train_data, epochs, optimiser_G,
                       optimiser_D, device):
