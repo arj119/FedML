@@ -32,7 +32,7 @@ class FedGDKDClient(BaseClient):
         adv_loss, aux_loss, fake_loss = self.model_trainer.train(self.local_training_data, self.device, self.args)
         wandb.log({f'Client {self.client_idx}/Train/Fake GAN Loss': fake_loss,
                    f'Client {self.client_idx}/Train/Fake Discriminative Loss': adv_loss,
-                   f'Client {self.client_idx}/Train/Fake Classification Loss': fake_loss,
+                   f'Client {self.client_idx}/Train/Fake Classification Loss': aux_loss,
                    'Round': communication_round})
         return self.model_trainer.get_model_params()
 
