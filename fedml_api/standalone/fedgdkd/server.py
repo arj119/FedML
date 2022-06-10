@@ -66,6 +66,17 @@ class FedGDKDAPI(HeterogeneousModelBaseTrainerAPI):
 
         logging.info("############setup_clients (END)#############")
 
+    def last_dimension_average(self, list):
+        length = len(list[0])
+        sums = [0] * length
+        for l in list:
+            for idx, item in enumerate(l):
+                sums[idx] += item
+
+        for i in range(length):
+            sums[i] = sums[i] / length
+        return sums
+
     def train(self):
         w_global = self.generator.get_model_params()
         DISTILLATION_DATASET_SIZE = self.args.distillation_dataset_size
@@ -85,7 +96,7 @@ class FedGDKDAPI(HeterogeneousModelBaseTrainerAPI):
             logging.info('########## Gan Training ########')
 
             w_locals = []
-
+            adv_losses, aux_losses, fake_losses = [], [], []
             client: FedGDKDClient
             for client in client_subset:
                 # Perform knowledge distillation (model drift correction) on current participating clients
@@ -96,10 +107,16 @@ class FedGDKDAPI(HeterogeneousModelBaseTrainerAPI):
                     client.classifier_knowledge_distillation(teacher_logits, distillation_dataset)
 
                 # Perform local training as usual
-                w_local = client.train(copy.deepcopy(w_global), round_idx)
-
+                w_local, adv_loss, aux_loss, fake_loss = client.train(copy.deepcopy(w_global), round_idx)
+                adv_losses.append(adv_loss)
+                aux_losses.append(aux_loss)
+                fake_losses.append(fake_loss)
                 w_locals.append(w_local)
 
+            wandb.log({f'Gen/Average Fake GAN Loss': sum(fake_losses) / len(fake_losses),
+                       f'Gen/Average Fake Discriminative Loss': sum(adv_losses) / len(adv_losses),
+                       f'Gen/Average Fake Classification Loss': sum(aux_losses) / len(aux_losses),
+                       'Round': round_idx})
             # update global weights
             w_global = self._aggregate(w_locals)
             # self.generator.set_model_params(g_global)

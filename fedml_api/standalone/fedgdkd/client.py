@@ -34,7 +34,7 @@ class FedGDKDClient(BaseClient):
                    f'Client {self.client_idx}/Train/Fake Discriminative Loss': adv_loss,
                    f'Client {self.client_idx}/Train/Fake Classification Loss': aux_loss,
                    'Round': communication_round})
-        return self.model_trainer.get_model_params()
+        return self.model_trainer.get_model_params(), adv_loss, aux_loss, fake_loss
 
     def pre_train(self):
         """
