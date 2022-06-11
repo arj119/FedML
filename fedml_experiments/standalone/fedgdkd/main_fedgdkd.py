@@ -51,6 +51,10 @@ class FedGDKDExperiment(ExperimentBase):
 
         parser.add_argument('--change', type=str, default='')
 
+        parser.add_argument('--dp', type=bool, default=True)
+
+        parser.add_argument('--epsilon', type=float, default=50.0)
+
         return parser
 
     def experiment_start(self, client_model_config, client_models, args, device, dataset):

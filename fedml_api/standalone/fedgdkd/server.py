@@ -12,6 +12,7 @@ from FID.FIDScorer import FIDScorer
 from fedml_api.standalone.fedgdkd.ac_gan_model_trainer import ACGANModelTrainer
 from fedml_api.standalone.fedgdkd.client import FedGDKDClient
 from fedml_api.standalone.fedgdkd.model_trainer import FedGDKDModelTrainer
+from fedml_api.standalone.fedgdkd.dp_model_trainer import DPModelTrainer
 from fedml_api.standalone.utils.HeterogeneousModelBaseTrainerAPI import HeterogeneousModelBaseTrainerAPI
 
 
@@ -28,8 +29,10 @@ class FedGDKDAPI(HeterogeneousModelBaseTrainerAPI):
 
         self.mean = torch.Tensor([0.5])
         self.std = torch.Tensor([0.5])
+        self.model_trainer_instance = DPModelTrainer if args.dp else FedGDKDModelTrainer
 
-        self.generator = ACGANModelTrainer(generator, None)
+        self.generator = self.model_trainer_instance(generator, None)
+
         self.generator_model = self.generator.generator
         # For logging GAN progress
         self.fixed_labels = self.generator_model.generate_balanced_labels(
@@ -54,7 +57,7 @@ class FedGDKDAPI(HeterogeneousModelBaseTrainerAPI):
         c_idx = 0
         for local_model, freq in client_models:
             for i in range(freq):
-                model_trainer = FedGDKDModelTrainer(
+                model_trainer = self.model_trainer_instance(
                     copy.deepcopy(self.generator.model),
                     copy.deepcopy(local_model)
                 )

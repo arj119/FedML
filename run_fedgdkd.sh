@@ -35,6 +35,7 @@ DISTILLATION_DATASET_SIZE=${15}
 KD_ALPHA=${16}
 KD_EPOCHS=${17}
 
+
 cd ./fedml_experiments/standalone/"$ALGORITHM"
 
 python3 "./main_$ALGORITHM.py" \
@@ -53,6 +54,7 @@ python3 "./main_$ALGORITHM.py" \
 --client_num_per_round "$CLIENT_NUM_PER_ROUND" \
 --client_config_file "$CONFIG_FILE" \
 --distillation_dataset_size "$DISTILLATION_DATASET_SIZE" \
---kd_alpha "$KD_ALPHA" \
---kd_epochs "$KD_EPOCHS" \
---change "$CHANGE"
+--dp True \
+#--kd_alpha "$KD_ALPHA" \
+#--kd_epochs "$KD_EPOCHS" \
+#--change "$CHANGE"

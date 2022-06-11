@@ -40,3 +40,7 @@ run-fedgan-experiments:
 	./run_fed_experiment.sh fedgan mnist mnist hetero 0.5 4 0.25 50 5 GAN_fid 1 10 10 ./experiment_client_configs/homogeneous_all_participating.json
 	./run_fed_experiment.sh fedgan mnist mnist hetero 0.1 4 0.25 50 5 GAN_fid 1 10 10 ./experiment_client_configs/homogeneous_all_participating.json
 	./run_fed_experiment.sh fedgan mnist mnist hetero 0.05 3 0.25 50 5 GAN_fid 1 10 10 ./experiment_client_configs/homogeneous_all_participating.json
+
+run-stuff:
+	./run_fed_experiment.sh fedgdkd emnist emnist hetero 0.5 4 0.1 50 5 GAN_fid 1 10 10 ./experiment_client_configs/homogeneous_all_participating.json
+	./run_fed_experiment.sh fedgdkd emnist emnist hetero 0.1 1 0.1 50 5 GAN_fid 1 10 10 ./experiment_client_configs/homogeneous_all_participating.json
