@@ -10,7 +10,7 @@ from fedml_experiments.standalone.utils.experiment import ExperimentBase
 
 
 class BaselineExperiment(ExperimentBase):
-    algorithm_name = 'Baseline'
+    algorithm_name = 'Baseline (5% Shared)'
 
     def add_custom_args(self, parser):
         """
@@ -25,6 +25,9 @@ class BaselineExperiment(ExperimentBase):
                             default='./config/config.json',
                             help='Path to client model configuration. Should be a json file with list of '
                                  '[(client_model, freq)]')
+
+        parser.add_argument('--share_percentage', type=float, default=0.05,
+                            help='Percentage of private dataset each client is willing to share')
 
         return parser
 

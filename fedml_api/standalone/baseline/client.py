@@ -1,8 +1,10 @@
 import logging
 
-from torch.utils.data import random_split, DataLoader, TensorDataset
+from torch.utils.data import random_split, DataLoader
+import torch
+import numpy as np
 
-from fedml_api.standalone.federated_arjun.model_trainer import FedArjunModelTrainer
+from fedml_api.standalone.fd_faug.utils.data_utils import AugmentDataset
 from fedml_api.standalone.utils.BaseClient import BaseClient
 
 
@@ -41,3 +43,14 @@ class BaselineClient(BaseClient):
 
         """
         self.model_trainer.pre_train(private_data=self.local_training_data, device=self.device, args=self.args)
+
+    def augment_training_data(self, augment_data):
+        self.local_training_data = AugmentDataset([self.local_training_data, augment_data])
+
+    def share_data(self, share_percentage, args):
+        local_training_set = self.local_training_data.dataset
+        number_to_share = int(share_percentage * len(local_training_set))
+        share_idx = torch.from_numpy(np.random.choice(len(local_training_set), size=(number_to_share,), replace=False))
+        shared_data = torch.utils.data.Subset(local_training_set, share_idx)
+        shared_data = DataLoader(shared_data, batch_size=args.batch_size)
+        return shared_data

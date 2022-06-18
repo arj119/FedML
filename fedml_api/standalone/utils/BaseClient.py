@@ -78,7 +78,7 @@ class BaseClient:
             data = self._get_training_data_from_tuple()
         else:
             data = self.local_test_data
-        train_classes = list(torch.concat([label for _, label in data], dim=0).numpy())
+        train_classes = list(torch.concat([label for _, label in data], dim=0).cpu().numpy())
         return self.client_idx, dict(Counter(train_classes))
 
     def _get_training_data_from_tuple(self):

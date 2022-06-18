@@ -3,9 +3,11 @@ import logging
 from typing import List, Tuple
 
 import torch
+import wandb
 
 from fedml_api.standalone.baseline.client import BaselineClient
 from fedml_api.standalone.baseline.model_trainer import BaselineModelTrainer
+from fedml_api.standalone.fd_faug.utils.data_utils import AugmentDataset
 from fedml_api.standalone.utils.HeterogeneousModelBaseTrainerAPI import HeterogeneousModelBaseTrainerAPI
 
 
@@ -22,6 +24,21 @@ class BaselineAPI(HeterogeneousModelBaseTrainerAPI):
 
         self._setup_clients(self.train_data_local_num_dict, self.train_data_local_dict, self.test_data_local_dict,
                             client_models)
+
+        public_dataset_size, public_datasets = 0, []
+
+        c: BaselineClient
+        for c in self.client_list:
+            client_shared_data = c.share_data(args.share_percentage, args)
+            public_dataset_size += len(client_shared_data.dataset)
+            public_datasets.append(client_shared_data)
+
+        self.augmented_data = AugmentDataset(public_datasets)
+
+        wandb.log({'Shared Data Size': public_dataset_size})
+
+        for c in self.client_list:
+            c.augment_training_data(augment_data=self.augmented_data)
 
         self._plot_client_training_data_distribution()
 
