@@ -1,9 +1,0 @@
-{
-  "adapter_model": "cnn_medium",
-  "client_models": [
-    {
-      "model": "cnn_medium",
-      "freq": 10
-    }
-  ]
-}
