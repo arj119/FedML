@@ -8,6 +8,7 @@ import wandb
 from torchvision.utils import make_grid
 import torchvision.transforms as tfs
 
+from FID.FIDScorer import FIDScorer
 from fedml_api.standalone.fd_faug.client import Client
 from fedml_api.standalone.fd_faug.model_trainer import FDFAugModelTrainer
 from fedml_api.standalone.fd_faug.utils.data_utils import AugmentDataset
@@ -67,6 +68,15 @@ class FDFAugAPI(HeterogeneousModelBaseTrainerAPI):
 
         logging.info(f'Public dataset size = {public_dataset_size}')
         logging.info('############ Creating public dataset(END) ############')
+
+        # Log FID Score
+        # Generate dataset that can be used to calculate FID score
+        self.FID_source_set = self._generate_train_subset(num_samples=10000)
+        self.FIDScorer = FIDScorer()
+        fid_score = self.FIDScorer.calculate_fid(images_real=self.FID_source_set,
+                                                 images_fake=client_augmented_data, device=self.device)
+        logging.info(f'FID Score: {fid_score}')
+        wandb.log({'Gen/FID Score Distillation Set': fid_score, 'Round': 0})
 
         self._plot_client_training_data_distribution()
 
