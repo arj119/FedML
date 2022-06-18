@@ -4,13 +4,12 @@ import os
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.getcwd(), "../../../")))
 
-from fedml_experiments.standalone.utils.model import create_local_models_from_config
 from fedml_api.standalone.baseline.server import BaselineAPI
 from fedml_experiments.standalone.utils.experiment import ExperimentBase
 
 
 class BaselineExperiment(ExperimentBase):
-    algorithm_name = 'Baseline (5% Shared)'
+    algorithm_name = 'Baseline'
 
     def add_custom_args(self, parser):
         """
@@ -26,7 +25,7 @@ class BaselineExperiment(ExperimentBase):
                             help='Path to client model configuration. Should be a json file with list of '
                                  '[(client_model, freq)]')
 
-        parser.add_argument('--share_percentage', type=float, default=0.05,
+        parser.add_argument('--share_percentage', type=float, default=0.0,
                             help='Percentage of private dataset each client is willing to share')
 
         return parser
