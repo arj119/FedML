@@ -30,6 +30,7 @@ class FedGDKDAPI(HeterogeneousModelBaseTrainerAPI):
         self.std = torch.Tensor([0.5])
 
         self.generator = ACGANModelTrainer(generator, None)
+        logging.info(generator)
         self.generator_model = self.generator.generator
         # For logging GAN progress
         self.fixed_labels = self.generator_model.generate_balanced_labels(
