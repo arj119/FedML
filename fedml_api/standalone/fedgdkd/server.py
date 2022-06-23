@@ -164,17 +164,6 @@ class FedGDKDAPI(HeterogeneousModelBaseTrainerAPI):
                 else:
                     self._local_test_on_all_clients(round_idx)
 
-    def _aggregate(self, w_locals):
-        w = 1 / len(w_locals)
-        averaged_params = w_locals[0]
-        for k in averaged_params.keys():
-            for i, local_model_params in enumerate(w_locals):
-                if i == 0:
-                    averaged_params[k] = local_model_params[k] * w
-                else:
-                    averaged_params[k] += local_model_params[k] * w
-        return averaged_params
-
     def log_gan_images(self, caption, round_idx):
         images = make_grid(
             self.denorm(
