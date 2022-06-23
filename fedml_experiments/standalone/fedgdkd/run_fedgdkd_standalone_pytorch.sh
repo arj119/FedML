@@ -24,15 +24,9 @@ OPT=${11}
 
 CI=${12}
 
-KD_EPOCHS=${13}
+CLIENT_CONFIG_FILE=${13}
 
-KD_LAMBDA=${14}
-
-REVISIT_EPOCHS=${15}
-
-CLIENT_CONFIG_FILE=${16}
-
-python3 ./main_federated_arjun.py \
+python3 ./main_fedgdkd.py \
 --gpu $GPU \
 --dataset $DATASET \
 --data_dir $DATA_PATH \

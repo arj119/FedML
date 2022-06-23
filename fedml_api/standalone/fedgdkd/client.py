@@ -3,7 +3,7 @@ import logging
 from fedml_api.standalone.utils.BaseClient import BaseClient
 
 
-class FedDTGArjunClient(BaseClient):
+class FedGDKDClient(BaseClient):
 
     def __init__(self, client_idx, local_training_data, local_test_data, local_sample_number, global_test_data, args,
                  device, model_trainer):

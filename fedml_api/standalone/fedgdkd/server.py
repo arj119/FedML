@@ -9,13 +9,13 @@ from torchvision.utils import make_grid
 import torchvision.transforms as tfs
 
 from FID.FIDScorer import FIDScorer
-from fedml_api.standalone.fedDTG_arjun.ac_gan_model_trainer import ACGANModelTrainer
-from fedml_api.standalone.fedDTG_arjun.client import FedDTGArjunClient
-from fedml_api.standalone.fedDTG_arjun.model_trainer import FedDTGArjunModelTrainer
+from fedml_api.standalone.fedgdkd.ac_gan_model_trainer import ACGANModelTrainer
+from fedml_api.standalone.fedgdkd.client import FedGDKDClient
+from fedml_api.standalone.fedgdkd.model_trainer import FedGDKDModelTrainer
 from fedml_api.standalone.utils.HeterogeneousModelBaseTrainerAPI import HeterogeneousModelBaseTrainerAPI
 
 
-class FedDTGArjunAPI(HeterogeneousModelBaseTrainerAPI):
+class FedGDKDAPI(HeterogeneousModelBaseTrainerAPI):
     def __init__(self, dataset, device, args, generator, client_models: List[Tuple[torch.nn.Module, int]]):
         """
         Args:
@@ -30,6 +30,7 @@ class FedDTGArjunAPI(HeterogeneousModelBaseTrainerAPI):
         self.std = torch.Tensor([0.5])
 
         self.generator = ACGANModelTrainer(generator, None)
+        logging.info(generator)
         self.generator_model = self.generator.generator
         # For logging GAN progress
         self.fixed_labels = self.generator_model.generate_balanced_labels(
@@ -54,13 +55,13 @@ class FedDTGArjunAPI(HeterogeneousModelBaseTrainerAPI):
         c_idx = 0
         for local_model, freq in client_models:
             for i in range(freq):
-                model_trainer = FedDTGArjunModelTrainer(
+                model_trainer = FedGDKDModelTrainer(
                     copy.deepcopy(self.generator.model),
                     copy.deepcopy(local_model)
                 )
-                c = FedDTGArjunClient(c_idx, train_data_local_dict[c_idx], test_data_local_dict[c_idx],
-                                      train_data_local_num_dict[c_idx], self.test_global, self.args, self.device,
-                                      model_trainer)
+                c = FedGDKDClient(c_idx, train_data_local_dict[c_idx], test_data_local_dict[c_idx],
+                                  train_data_local_num_dict[c_idx], self.test_global, self.args, self.device,
+                                  model_trainer)
                 c_idx += 1
                 self.client_list.append(c)
 
@@ -68,7 +69,7 @@ class FedDTGArjunAPI(HeterogeneousModelBaseTrainerAPI):
 
     def train(self):
         w_global = self.generator.get_model_params()
-        DISTILLATION_DATASET_SIZE = 10000
+        DISTILLATION_DATASET_SIZE = self.args.distillation_dataset_size
         distillation_dataset = None
         teacher_logits = None
         prev_client_subset = None
@@ -86,7 +87,7 @@ class FedDTGArjunAPI(HeterogeneousModelBaseTrainerAPI):
 
             w_locals = []
 
-            client: FedDTGArjunClient
+            client: FedGDKDClient
             for client in client_subset:
                 # # Perform knowledge distillation (model drift correction) on current participating clients
                 # if prev_client_subset is not None and client.client_idx not in prev_client_subset:
@@ -112,15 +113,8 @@ class FedDTGArjunAPI(HeterogeneousModelBaseTrainerAPI):
             # logging.info('########## Distillation ########')
 
             # Creating distillation dataset here to save memory but same as if sending noise vector to clients
-            noise_vector = self.generator_model.generate_noise_vector(DISTILLATION_DATASET_SIZE, device=self.device)
-            labels = self.generator_model.generate_balanced_labels(DISTILLATION_DATASET_SIZE, device=self.device)
-            noise_labels = TensorDataset(noise_vector, labels)
-            noise_labels_loader = DataLoader(noise_labels, batch_size=self.args.batch_size)
+            distillation_dataset = self.generate_fake_dataset(DISTILLATION_DATASET_SIZE)
 
-            synth_data = self.generator.generate_distillation_dataset(noise_labels_loader, device=self.device)
-            del noise_labels_loader
-            distillation_dataset = DataLoader(TensorDataset(synth_data, labels), batch_size=self.args.batch_size)
-            #
             # local_logits = []
             # logging.info("########## Acquiring distillation logits... #########")
             # for client in client_subset:
@@ -148,8 +142,13 @@ class FedDTGArjunAPI(HeterogeneousModelBaseTrainerAPI):
                 self.log_gan_images(caption=f'Generator Output, communication round: {round_idx}', round_idx=round_idx)
                 logging.info("########## Logging generator images... Complete #########")
                 logging.info("########## Calculating FID Score...  #########")
+                fake = distillation_dataset
+                if DISTILLATION_DATASET_SIZE != 10000:
+                    fake = self.generate_fake_dataset(DISTILLATION_DATASET_SIZE)
                 fid_score = self.FIDScorer.calculate_fid(images_real=self.FID_source_set,
-                                                         images_fake=distillation_dataset, device=self.device)
+                                                         images_fake=fake, device=self.device)
+                if DISTILLATION_DATASET_SIZE != 10000:
+                    del fake
                 logging.info(f'FID Score: {fid_score}')
                 wandb.log({'Gen/FID Score Distillation Set': fid_score, 'Round': round_idx})
                 logging.info("########## Calculating FID Score... Complete #########")
@@ -196,3 +195,14 @@ class FedDTGArjunAPI(HeterogeneousModelBaseTrainerAPI):
                 print('Number of channels, width and height must be provided for resize.')
             x = x.view(x.size(0), channels, w, h)
         return x
+
+    def generate_fake_dataset(self, size):
+        # Creating distillation dataset here to save memory but same as if sending noise vector to clients
+        noise_vector = self.generator_model.generate_noise_vector(size, device=self.device)
+        labels = self.generator_model.generate_balanced_labels(size, device=self.device)
+        noise_labels = TensorDataset(noise_vector, labels)
+        noise_labels_loader = DataLoader(noise_labels, batch_size=self.args.batch_size)
+
+        synth_data = self.generator.generate_distillation_dataset(noise_labels_loader, device=self.device)
+        del noise_labels_loader
+        return DataLoader(TensorDataset(synth_data, labels), batch_size=self.args.batch_size)

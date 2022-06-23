@@ -65,7 +65,7 @@ class ACGANModelTrainer(ModelTrainer):
         generator.train()
         discriminator.train()
         classifier.train()
-        real_label, fake_label = 1, 0  # Soft labels
+        real_label, fake_label = 0.9, 0  # Soft labels
 
         # Initialize BCELoss function
         adversarial_loss = nn.BCELoss().to(device)
@@ -105,7 +105,9 @@ class ACGANModelTrainer(ModelTrainer):
                 # Loss measures generator's ability to fool the discriminator
                 _, validity = discriminator(gen_imgs, discriminator=True)
                 pred_label = classifier(gen_imgs)
+                gradient_reversal = pred_label.register_hook(lambda grad: -grad)  # gradient reversal
                 errG = (adversarial_loss(validity, label_real_adv) + auxiliary_loss(pred_label, gen_labels)) / 2
+                gradient_reversal.remove()  # remove gradient reversal hook
 
                 errG.backward()
                 optimiser_G.step()
@@ -194,18 +196,7 @@ class ACGANModelTrainer(ModelTrainer):
 
         kd_alpha = args.kd_alpha
 
-        if args.client_optimizer == "sgd":
-            optimiser_C = torch.optim.SGD(self.local_model.parameters(), lr=args.lr)
-
-
-        else:
-            beta1, beta2 = 0.5, 0.999
-            optimiser_C = torch.optim.Adam(filter(lambda p: p.requires_grad, self.local_model.parameters()),
-                                           lr=args.lr,
-                                           weight_decay=args.wd,
-                                           amsgrad=True,
-                                           betas=(beta1, beta2)
-                                           )
+        optimiser_C = self.get_client_optimiser(classifier, args.client_optimizer, args.lr)
 
         epoch_dist_loss = []
         for epoch in range(args.kd_epochs):
@@ -232,54 +223,7 @@ class ACGANModelTrainer(ModelTrainer):
                 f'tEpoch: {epoch}\t Diss loss {epoch_dist_loss[-1]:.6f}')
 
     def test(self, test_data, device, args=None):
-        model = self.local_model.to(device)
-        model.eval()
-
-        metrics = {
-            'test_correct': 0,
-            'test_loss': 0,
-            'test_precision': 0,
-            'test_recall': 0,
-            'test_total': 0
-        }
-
-        '''
-        stackoverflow_lr is the task of multi-label classification
-        please refer to following links for detailed explainations on cross-entropy and corresponding implementation of tff research:
-        https://towardsdatascience.com/cross-entropy-for-classification-d98e7f974451
-        https://github.com/google-research/federated/blob/49a43456aa5eaee3e1749855eed89c0087983541/optimization/stackoverflow_lr/federated_stackoverflow_lr.py#L131
-        '''
-        if args.dataset == "stackoverflow_lr":
-            criterion = nn.BCELoss(reduction='sum').to(device)
-        else:
-            criterion = nn.CrossEntropyLoss().to(device)
-
-        with torch.no_grad():
-            for batch_idx, (x, target) in enumerate(test_data):
-                x = x.to(device)
-                target = target.to(device)
-                pred = model(x)
-                loss = criterion(pred, target)
-
-                if args.dataset == "stackoverflow_lr":
-                    predicted = (pred > .5).int()
-                    correct = predicted.eq(target).sum(axis=-1).eq(target.size(1)).sum()
-                    true_positive = ((target * predicted) > .1).int().sum(axis=-1)
-                    precision = true_positive / (predicted.sum(axis=-1) + 1e-13)
-                    recall = true_positive / (target.sum(axis=-1) + 1e-13)
-                    metrics['test_precision'] += precision.sum().item()
-                    metrics['test_recall'] += recall.sum().item()
-                else:
-                    _, predicted = torch.max(pred, 1)
-                    correct = predicted.eq(target).sum()
-
-                metrics['test_correct'] += correct.item()
-                metrics['test_loss'] += loss.item() * target.size(0)
-                if len(target.size()) == 1:  #
-                    metrics['test_total'] += target.size(0)
-                elif len(target.size()) == 2:  # for tasks of next word prediction
-                    metrics['test_total'] += target.size(0) * target.size(1)
-        return metrics
+        return self.test_model(self.local_model, test_data, device, args)
 
     def test_on_the_server(self, train_data_local_dict, test_data_local_dict, device, args=None) -> bool:
         return False
@@ -294,28 +238,10 @@ class ACGANModelTrainer(ModelTrainer):
         generator.eval()
         with torch.no_grad():
             synth_data = []
-            # labels_bucket = []
             for noise, labels in noise_labels:
                 noise, labels = noise.to(device), labels.to(device)
                 generated_data = generator(noise, labels)
                 synth_data.append(generated_data.cpu())
-                # labels_bucket.append(copy.deepcopy(labels.cpu()))
-
-            # noise = noise.to(device)
-            #
-            # b_size = noise.size(0)
-            #
-            # synth_data = []
-            # labels = []
-            # for label in class_labels:
-            #     label_vector = torch.full(size=(b_size,), fill_value=label, device=device)
-            #     generated_data = generator(noise, label_vector)
-            #     synth_data.append(generated_data)
-            #     labels.append(label_vector)
 
             synth_data = torch.cat(synth_data, dim=0)
-        # labels = torch.cat(labels_bucket, dim=0)
-
-        # dataset = TensorDataset(synth_data, labels)
-        # data_loader = DataLoader(dataset, batch_size=noise_labels.batch_size)
         return synth_data
