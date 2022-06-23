@@ -5,16 +5,21 @@ from typing import List, Tuple
 
 import torch
 import wandb
+from torchvision.utils import make_grid
+import torchvision.transforms as tfs
 
+from FID.FIDScorer import FIDScorer
 from fedml_api.standalone.fd_faug.client import Client
 from fedml_api.standalone.fd_faug.model_trainer import FDFAugModelTrainer
 from fedml_api.standalone.fd_faug.utils.data_utils import AugmentDataset
+from fedml_api.standalone.fedgan.ac_gan_model_trainer import ACGANModelTrainer
 from fedml_api.standalone.utils.HeterogeneousModelBaseTrainerAPI import HeterogeneousModelBaseTrainerAPI
 from fedml_api.standalone.utils.plot import plot_label_distributions
 
 
 class FDFAugAPI(HeterogeneousModelBaseTrainerAPI):
-    def __init__(self, dataset, device, args, client_models: List[Tuple[torch.nn.Module, int]]):
+    def __init__(self, dataset, device, args, generator, discriminator,
+                 client_models: List[Tuple[torch.nn.Module, int]]):
         """
         Args:
             dataset: Dataset presplit into data loaders
@@ -30,7 +35,10 @@ class FDFAugAPI(HeterogeneousModelBaseTrainerAPI):
         public_datasets = []
         public_dataset_size = 0
 
-        logging.info('############ Creating public dataset ############')
+        logging.info('############ Creating Augmented dataset (FAug) ############')
+        self.mean = torch.Tensor([0.5])
+        self.std = torch.Tensor([0.5])
+
         c: Client
         for c in self.client_list:
             client_shared_data = c.share_data(args.share_percentage, args)
@@ -39,11 +47,36 @@ class FDFAugAPI(HeterogeneousModelBaseTrainerAPI):
 
         self.augmented_data = AugmentDataset(public_datasets)
 
+        self.augment_generator_trainer: ACGANModelTrainer = self._federated_augmentation(self.augmented_data, generator,
+                                                                                         discriminator)
+
+        self.generator_model = self.augment_generator_trainer.generator
+        # For logging GAN progress
+        self.fixed_labels = self.generator_model.generate_balanced_labels(
+            self.generator_model.num_classes * 8,
+            device='cpu')
+        self.fixed_noise = self.generator_model.generate_noise_vector(self.generator_model.num_classes * 8,
+                                                                      device='cpu')
+
+        self.log_gan_images('FAug Generator Output', 0)
+        wandb.log({'Shared Data Size': public_dataset_size})
+
         for c in self.client_list:
-            c.augment_training_data(augment_data=self.augmented_data)
+            client_augmented_data = self.augment_generator_trainer.generate_fake_dataset(10000, 'cpu',
+                                                                                         self.args.batch_size)
+            c.augment_training_data(augment_data=client_augmented_data)
 
         logging.info(f'Public dataset size = {public_dataset_size}')
         logging.info('############ Creating public dataset(END) ############')
+
+        # Log FID Score
+        # Generate dataset that can be used to calculate FID score
+        self.FID_source_set = self._generate_train_subset(num_samples=10000)
+        self.FIDScorer = FIDScorer()
+        fid_score = self.FIDScorer.calculate_fid(images_real=self.FID_source_set,
+                                                 images_fake=client_augmented_data, device=self.device)
+        logging.info(f'FID Score: {fid_score}')
+        wandb.log({'Gen/FID Score Distillation Set': fid_score, 'Round': 0})
 
         self._plot_client_training_data_distribution()
 
@@ -138,3 +171,38 @@ class FDFAugAPI(HeterogeneousModelBaseTrainerAPI):
         client_test_label_count = {client_idx: label_count for client_idx, label_count in client_label_counts}
         plot_label_distributions(client_test_label_count, self.class_num, alpha=self.args.partition_alpha,
                                  dataset='Test')
+
+    def _federated_augmentation(self, train_data, generator, discriminator):
+        logging.info('############ FAug ############')
+        trainer = ACGANModelTrainer(generator, discriminator)
+
+        generator, discriminator = generator.to(self.device), discriminator.to(self.device)
+
+        optimiser_G = trainer.get_client_optimiser(generator, self.args.gen_optimizer, self.args.gen_lr)
+        optimiser_D = trainer.get_client_optimiser(discriminator, self.args.client_optimizer, self.args.lr)
+
+        trainer._gan_training(generator, discriminator, train_data, self.args.faug_epochs, optimiser_G, optimiser_D,
+                              self.device)
+        logging.info('############ FAug Complete ############')
+        return trainer
+
+    def log_gan_images(self, caption, round_idx):
+        generator = self.generator_model.to(self.device)
+        images = make_grid(
+            self.denorm(generator(self.fixed_noise.to(self.device), self.fixed_labels.to(self.device))),
+            nrow=8,
+            padding=2,
+            normalize=False,
+            range=None,
+            scale_each=False, pad_value=0)
+        images = wandb.Image(images, caption=caption)
+        wandb.log({f"Generator Outputs": images, 'Round': round_idx})
+
+    def denorm(self, x, channels=None, w=None, h=None, resize=False, device='cpu'):
+        unnormalize = tfs.Normalize((-self.mean / self.std).tolist(), (1.0 / self.std).tolist()).to(device)
+        x = unnormalize(x)
+        if resize:
+            if channels is None or w is None or h is None:
+                print('Number of channels, width and height must be provided for resize.')
+            x = x.view(x.size(0), channels, w, h)
+        return x

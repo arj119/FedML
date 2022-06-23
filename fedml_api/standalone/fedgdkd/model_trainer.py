@@ -10,7 +10,7 @@ from torch.utils.data import TensorDataset, DataLoader
 from itertools import cycle
 
 from fedml_api.model.cv.generator import Generator, ConditionalImageGenerator
-from fedml_api.standalone.fedDTG_arjun.ac_gan_model_trainer import ACGANModelTrainer
+from fedml_api.standalone.fedgdkd.ac_gan_model_trainer import ACGANModelTrainer
 from knowledge_distillation.soft_target import SoftTarget
 
 try:
@@ -19,7 +19,7 @@ except ImportError:
     from FedML.fedml_core.trainer.model_trainer import ModelTrainer
 
 
-class FedDTGArjunModelTrainer(ACGANModelTrainer):
+class FedGDKDModelTrainer(ACGANModelTrainer):
     def _gan_training(self, generator: ConditionalImageGenerator, discriminator, train_data, epochs, optimiser_G,
                       optimiser_D, device):
         generator.train()

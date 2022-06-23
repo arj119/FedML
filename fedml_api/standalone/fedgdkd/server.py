@@ -3,19 +3,19 @@ import logging
 from typing import List, Tuple
 
 import torch
-import torchvision.transforms as tfs
 import wandb
 from torch.utils.data import DataLoader, TensorDataset
 from torchvision.utils import make_grid
+import torchvision.transforms as tfs
 
 from FID.FIDScorer import FIDScorer
-from fedml_api.standalone.fedDTG_arjun.ac_gan_model_trainer import ACGANModelTrainer
-from fedml_api.standalone.fedDTG_arjun.client import FedDTGArjunClient
-from fedml_api.standalone.fedDTG_arjun.model_trainer import FedDTGArjunModelTrainer
+from fedml_api.standalone.fedgdkd.ac_gan_model_trainer import ACGANModelTrainer
+from fedml_api.standalone.fedgdkd.client import FedGDKDClient
+from fedml_api.standalone.fedgdkd.model_trainer import FedGDKDModelTrainer
 from fedml_api.standalone.utils.HeterogeneousModelBaseTrainerAPI import HeterogeneousModelBaseTrainerAPI
 
 
-class FedDTGArjunAPI(HeterogeneousModelBaseTrainerAPI):
+class FedGDKDAPI(HeterogeneousModelBaseTrainerAPI):
     def __init__(self, dataset, device, args, generator, client_models: List[Tuple[torch.nn.Module, int]]):
         """
         Args:
@@ -30,6 +30,7 @@ class FedDTGArjunAPI(HeterogeneousModelBaseTrainerAPI):
         self.std = torch.Tensor([0.5])
 
         self.generator = ACGANModelTrainer(generator, None)
+        logging.info(generator)
         self.generator_model = self.generator.generator
         # For logging GAN progress
         self.fixed_labels = self.generator_model.generate_balanced_labels(
@@ -54,13 +55,13 @@ class FedDTGArjunAPI(HeterogeneousModelBaseTrainerAPI):
         c_idx = 0
         for local_model, freq in client_models:
             for i in range(freq):
-                model_trainer = FedDTGArjunModelTrainer(
+                model_trainer = FedGDKDModelTrainer(
                     copy.deepcopy(self.generator.model),
                     copy.deepcopy(local_model)
                 )
-                c = FedDTGArjunClient(c_idx, train_data_local_dict[c_idx], test_data_local_dict[c_idx],
-                                      train_data_local_num_dict[c_idx], self.test_global, self.args, self.device,
-                                      model_trainer)
+                c = FedGDKDClient(c_idx, train_data_local_dict[c_idx], test_data_local_dict[c_idx],
+                                  train_data_local_num_dict[c_idx], self.test_global, self.args, self.device,
+                                  model_trainer)
                 c_idx += 1
                 self.client_list.append(c)
 
@@ -68,7 +69,7 @@ class FedDTGArjunAPI(HeterogeneousModelBaseTrainerAPI):
 
     def train(self):
         w_global = self.generator.get_model_params()
-        DISTILLATION_DATASET_SIZE = 10000
+        DISTILLATION_DATASET_SIZE = self.args.distillation_dataset_size
         # distillation_dataset = None
         teacher_logits = None
         prev_client_subset = None
@@ -88,7 +89,7 @@ class FedDTGArjunAPI(HeterogeneousModelBaseTrainerAPI):
 
             w_locals = []
 
-            client: FedDTGArjunClient
+            client: FedGDKDClient
             for client in client_subset:
                 # Perform knowledge distillation (model drift correction) on current participating clients
                 if prev_client_subset is not None and client.client_idx not in prev_client_subset:
@@ -130,8 +131,10 @@ class FedDTGArjunAPI(HeterogeneousModelBaseTrainerAPI):
                 logging.info(f"##### Client {client.client_idx} #####")
                 teacher_logits = torch.mean(torch.stack(local_logits[:idx] + local_logits[idx + 1:]), dim=0)
                 teacher_logits = DataLoader(TensorDataset(teacher_logits), batch_size=self.args.batch_size)
-                client.classifier_knowledge_distillation(teacher_logits)
 
+                client.classifier_knowledge_distillation(teacher_logits, distillation_dataset)
+
+            # For next round
             teacher_logits = torch.mean(torch.stack(local_logits), dim=0)
             teacher_logits = DataLoader(TensorDataset(teacher_logits), batch_size=self.args.batch_size)
             prev_client_subset = {c.client_idx for c in client_subset}

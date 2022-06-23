@@ -1,9 +1,0 @@
-{
-  "generator": "conditional_generator",
-  "client_models": [
-    {
-      "model": "cnn_medium",
-      "freq": 10
-    }
-  ]
-}

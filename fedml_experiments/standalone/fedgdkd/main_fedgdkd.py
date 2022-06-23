@@ -5,11 +5,11 @@ import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.getcwd(), "../../../")))
 
 from fedml_experiments.standalone.utils.model import create_model, create_local_models_from_config
-from fedml_api.standalone.fedDTG_arjun.server import FedDTGArjunAPI
+from fedml_api.standalone.fedgdkd.server import FedGDKDAPI
 from fedml_experiments.standalone.utils.experiment import ExperimentBase
 
 
-class FedDTGArjunExperiment(ExperimentBase):
+class FedGDKDExperiment(ExperimentBase):
     algorithm_name = 'FedGDKD Without Shared Generator'
 
     def add_custom_args(self, parser):
@@ -46,13 +46,18 @@ class FedDTGArjunExperiment(ExperimentBase):
         parser.add_argument('--kd_epochs', type=int, default=5,
                             help='Number of knowledge distillation epochs')
 
+        parser.add_argument('--distillation_dataset_size', type=int, default=10000,
+                            help='Size of distillation dataset to construct')
+
+        parser.add_argument('--change', type=str, default='')
+
         return parser
 
     def experiment_start(self, client_model_config, client_models, args, device, dataset):
         generator = create_model(args, model_name=client_model_config['generator'], output_dim=dataset[7])
-        api = FedDTGArjunAPI(dataset, device, args, generator, client_models)
+        api = FedGDKDAPI(dataset, device, args, generator, client_models)
         api.train()
 
 
 if __name__ == "__main__":
-    FedDTGArjunExperiment().start()
+    FedGDKDExperiment().start()
