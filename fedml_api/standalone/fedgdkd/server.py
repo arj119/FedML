@@ -132,7 +132,7 @@ class FedGDKDAPI(HeterogeneousModelBaseTrainerAPI):
                 teacher_logits = torch.mean(torch.stack(local_logits[:idx] + local_logits[idx + 1:]), dim=0)
                 teacher_logits = DataLoader(TensorDataset(teacher_logits), batch_size=self.args.batch_size)
 
-                client.classifier_knowledge_distillation(teacher_logits, distillation_dataset)
+                client.classifier_knowledge_distillation(teacher_logits, noise_vector)
 
             # For next round
             teacher_logits = torch.mean(torch.stack(local_logits), dim=0)
@@ -142,7 +142,7 @@ class FedGDKDAPI(HeterogeneousModelBaseTrainerAPI):
             if round_idx % 1 == 0:
                 logging.info("########## Calculating FID Score...  #########")
                 fid_scores = []
-                c: FedDTGArjunClient
+                c: FedGDKDClient
                 for c in self.client_list:
                     fid_scores.append(c.get_FID_score(self.FIDScorer, self.FID_source_set, round_idx))
                     c.log_gan_images(caption=f'Generator Output, communication round: {round_idx}',
@@ -163,17 +163,6 @@ class FedGDKDAPI(HeterogeneousModelBaseTrainerAPI):
                     self._local_test_on_validation_set(round_idx)
                 else:
                     self._local_test_on_all_clients(round_idx)
-
-    def _aggregate(self, w_locals):
-        w = 1 / len(w_locals)
-        averaged_params = w_locals[0]
-        for k in averaged_params.keys():
-            for i, local_model_params in enumerate(w_locals):
-                if i == 0:
-                    averaged_params[k] = local_model_params[k] * w
-                else:
-                    averaged_params[k] += local_model_params[k] * w
-        return averaged_params
 
     def log_gan_images(self, caption, round_idx):
         images = make_grid(
