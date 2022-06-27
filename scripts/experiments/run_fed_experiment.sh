@@ -8,8 +8,8 @@ set -ex
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
 # activate the fedml environment
-source "$HOME/miniconda/etc/profile.d/conda.sh"
-source "$SCRIPT_DIR/.env"
+. "$HOME/miniconda/etc/profile.d/conda.sh"
+. "$SCRIPT_DIR/.env"
 
 conda activate fedml
 
